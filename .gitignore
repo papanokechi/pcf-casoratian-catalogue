@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.mypy_cache/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Lean / Mathlib (regenerable; pin via lake-manifest.json + lean-toolchain only)
+/.lake/
+/build/
+*.olean
+*.ilean
+*.trace
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local scratch
+COMMIT_MSG.txt
+*_scratch.*
+_diag.py
