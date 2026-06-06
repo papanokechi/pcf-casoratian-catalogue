@@ -1,5 +1,20 @@
 # pcf-casoratian-catalogue
 
+> **Disambiguation / status.** This repository is a *methodology scaffold* with
+> **no mathematical results yet** — it defines the gate line for *future*
+> machine-checkable Casoratian closed forms. It is **distinct from** the
+> published companion repository
+> [`papanokechi/pcf-casoratian-identities`](https://github.com/papanokechi/pcf-casoratian-identities),
+> which accompanies the deposited paper *"Polynomial Continued Fractions: a
+> Proved Logarithmic Ladder, a 4/π Casoratian Identity, and 482 Irrational
+> Constants"* (Zenodo concept DOI
+> [10.5281/zenodo.19491767](https://doi.org/10.5281/zenodo.19491767)) and contains
+> the real, finished 4/π Casoratian-identity result. Nothing in *this* repository
+> is deposited or claimed as a result; no entry exists until a genuinely new
+> family passes `harness_caso.py` and reaches a clean Lean axiom cone (see
+> Workflow below). Do **not** tag or deposit this repository as a result until
+> then.
+
 A catalogue of machine-checkable Casoratian closed forms for polynomial
 continued fractions (PCFs), following the conditional-core pattern proven on the
 deposited 4/pi PCF. This is the "guaranteed-clean-deposit" track: it formalizes
