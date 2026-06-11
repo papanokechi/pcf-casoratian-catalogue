@@ -1,0 +1,532 @@
+\documentclass[11pt]{article}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{microtype}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}{Proposition}
+\newtheorem{corollary}{Corollary}
+\newtheorem{lemma}{Lemma}
+\newtheorem{definition}{Definition}
+\newtheorem{remark}{Remark}
+
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Caso}{C}
+\DeclareMathOperator{\sgn}{sgn}
+
+\title{A machine-checked, uniform-in-order Abel formula\\
+for the Casoratian, in Lean~4/Mathlib}
+\author{Papanokechi\\
+\small ORCID: \href{https://orcid.org/0009-0000-6192-8273}{0009-0000-6192-8273}}
+\date{June 2026 \quad(\texttt{pcf-casoratian-catalogue} v0.1.0 draft)}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+For $k$ sequences $s^{(0)},\dots,s^{(k-1)}\colon\N\to R$ over a commutative ring $R$,
+all solving the order-$k$ homogeneous linear recurrence
+$s(n+k)=\sum_{j=0}^{k-1}c_j(n)\,s(n+j)$, the \emph{Casoratian} (discrete Wronskian)
+$\Caso(n)=\det\big[s^{(t)}(n+i)\big]_{0\le i,t<k}$ obeys the first-order law
+$\Caso(n+1)=(-1)^{k-1}c_0(n)\,\Caso(n)$, hence the closed product form
+$\Caso(n)=\big(\prod_{l<n}(-1)^{k-1}c_0(l)\big)\Caso(0)$. Only the \emph{lowest}
+coefficient $c_0$ survives; $c_1,\dots,c_{k-1}$ cancel. This is \emph{Abel's formula}
+for the Casoratian --- classical, going back to Casorati, the discrete analogue of
+Liouville's formula for the Wronskian. Our contribution is not the identity but its treatment: we give a single
+proof valid \emph{uniformly in the order} $k$ and formalize it in Lean~4/Mathlib to a
+clean axiom cone (a subset of $\{\texttt{propext},\texttt{Classical.choice},
+\texttt{Quot.sound}\}$, no \texttt{sorry}). The formal proof rewrites the last row of
+$\Caso(n+1)$, via the recurrence, into a linear combination of the
+\emph{cyclically rotated} rows of $\Caso(n)$; \texttt{Matrix.det\_updateRow\_sum}
+collapses the combination to the single coefficient $c_0(n)$ and
+\texttt{sign\_finRotate} supplies the cyclic sign $(-1)^{k-1}$. We also formalize the
+constant-coefficient power form $\Caso(n)=\big((-1)^{k-1}c_0\big)^n\Caso(0)$, an
+integral-domain non-vanishing (linear-independence) certificate, and the
+order-$2$ and order-$3$ instances proved independently by hand as faithfulness
+witnesses (order $2$ reproduces the corpus sign $-c_0$, with Euler's $(-1)^n$
+convergent Wronskian as the case $c_0\equiv1$; order $3$ gives $+c_0$). The result
+opens the order-$\ge3$ direction in a formalized polynomial-continued-fraction corpus
+previously confined to the order-$2$ (three-term) case --- the algebraic backbone of
+simultaneous / Hermite--Pad\'e approximation and of Ap\'ery-type irrationality
+certificates. An independent computer-algebra gate confirms the identity
+symbolically at $k=3$, by exact-rational checks for $k=2,\dots,7$, and on named
+instances.
+\end{abstract}
+
+\noindent\textbf{2020 MSC:} 39A06 (primary), 68V20, 11J72, 15A15.\quad
+\textbf{Keywords:} Casoratian, discrete Wronskian, Abel's formula,
+linear difference equation, higher-order recurrence, Hermite--Pad\'e approximation,
+Ap\'ery-type irrationality, Lean~4, Mathlib, formal verification, polynomial continued
+fractions.
+
+\section{Introduction}\label{sec:intro}
+
+The convergents of a polynomial continued fraction $K_{n\ge1}\,a_n/b_n$ are governed
+by a three-term recurrence $q_n=b_nq_{n-1}+a_nq_{n-2}$, and the basic structural
+invariant is the order-$2$ Casoratian (discrete Wronskian) of two solutions: it
+flips sign and scales by the lower coefficient at each step, so the convergent
+Wronskian $p_{n+1}q_n-p_nq_{n+1}=(-1)^n$ is constant up to sign. This is the
+certificate behind Euler's irrationality criterion, and across the deposited corpus
+the Casoratian appears only in this order-$2$, three-term form
+(\cite{ladder,caso2lean}; formalized as \texttt{casoratian\_eqG} in the companion
+\texttt{pcf-delta} project~\cite{pcfdelta}).
+
+\paragraph{The order-$\ge3$ direction.}
+The natural next object is the Casoratian of $k\ge3$ solutions of an order-$k$
+recurrence
+\begin{equation}\label{eq:rec}
+  s(n+k)=\sum_{j=0}^{k-1}c_j(n)\,s(n+j),
+  \qquad c_0,\dots,c_{k-1}\colon\N\to R,
+\end{equation}
+the $k\times k$ determinant
+\begin{equation}\label{eq:caso}
+  \Caso(n)=\det\big[s^{(t)}(n+i)\big]_{0\le i,t<k}.
+\end{equation}
+This is the algebraic backbone of \emph{simultaneous} (Hermite--Pad\'e)
+approximation, the engine of Ap\'ery-type irrationality proofs
+(\cite{vdpoorten}): there one builds several sequences satisfying one common
+higher-order recurrence and certifies their linear independence through the
+non-vanishing of exactly this determinant. The first-order law that $\Caso$ obeys
+is classical --- the discrete analogue of Abel's identity for the Wronskian of a
+linear ODE, going back to Casorati; see, e.g., \cite[Ch.~2]{elaydi}
+and \cite{kelleypeterson}. It states that $\Caso$ is reproduced at each step by a
+single scalar built only from the \emph{lowest} coefficient $c_0$.
+
+\paragraph{Contribution.}
+The identity itself is not new. What we provide is:
+\begin{enumerate}
+\item[(i)] a single proof valid \emph{uniformly in the order} $k$
+(Theorem~\ref{thm:ajl}), and its formalization in Lean~4 with Mathlib to a clean
+axiom cone (Section~\ref{sec:lean}), so the result is \textsc{proven} in the strict
+sense of this program: \texttt{\#print axioms} reports a subset of
+$\{\texttt{propext},\texttt{Classical.choice},\texttt{Quot.sound}\}$ with no
+\texttt{sorryAx} and no \texttt{sorry}/\texttt{admit}/\texttt{native\_decide} in
+source;
+\item[(ii)] the closed product form, the constant-coefficient power form, and an
+integral-domain non-vanishing (linear-independence) certificate, all formalized
+(Section~\ref{sec:cons});
+\item[(iii)] the order-$2$ and order-$3$ instances proved \emph{independently} by a
+direct cofactor computation, kept as faithfulness witnesses against the general
+proof (Proposition~\ref{prop:lowk}); and
+\item[(iv)] an independent computer-algebra gate (Section~\ref{sec:gate}) that
+re-derives the law symbolically and on named instances, in the program's
+``gate-before-Lean'' discipline.
+\end{enumerate}
+Concretely, this opens the order-$\ge3$ space inside a formalized PCF corpus that had
+treated only order $2$, and supplies a reusable, machine-checked independence
+certificate for future Hermite--Pad\'e constructions.
+
+\section{The Casoratian of a linear recurrence}\label{sec:setup}
+
+Throughout, $R$ is a commutative ring and $k\ge1$ a fixed order. We write a solution
+of~\eqref{eq:rec} simply as a sequence $s\colon\N\to R$ satisfying that identity for
+all $n$; no invertibility of the coefficients is assumed.
+
+\begin{definition}[Casoratian]\label{def:caso}
+For sequences $s^{(0)},\dots,s^{(k-1)}\colon\N\to R$, the \emph{Casoratian} at $n$ is
+the determinant~\eqref{eq:caso} of the $k\times k$ matrix whose $(i,t)$ entry is the
+$i$-shift of the $t$-th sequence, $s^{(t)}(n+i)$.
+\end{definition}
+
+Because $\det$ is invariant under transposition, it is immaterial whether one indexes
+rows by shifts and columns by solutions or vice versa; we fix rows~$=$~shifts. The
+two ``ends'' of $\Caso(n+1)$ are what drive the law:
+\begin{itemize}
+\item \textbf{Top $k-1$ rows.} For $0\le i\le k-2$, row $i$ of $\Caso(n+1)$ is the
+shift vector $\big(s^{(t)}(n+1+i)\big)_t$, which is precisely row $i+1$ of
+$\Caso(n)$. So the top $k-1$ rows of $\Caso(n+1)$ are the bottom $k-1$ rows of
+$\Caso(n)$, in order.
+\item \textbf{Bottom row.} Row $k-1$ of $\Caso(n+1)$ is the shift vector at
+$n+k$, $\big(s^{(t)}(n+k)\big)_t$, which by the recurrence~\eqref{eq:rec} equals
+$\sum_{j=0}^{k-1}c_j(n)\,\big(s^{(t)}(n+j)\big)_t$, a linear combination of \emph{all}
+$k$ rows of $\Caso(n)$.
+\end{itemize}
+
+\section{The general-order Abel formula for the Casoratian}\label{sec:law}
+
+\begin{theorem}[Abel's formula for the Casoratian, uniform in $k$]\label{thm:ajl}
+Let $s^{(0)},\dots,s^{(k-1)}\colon\N\to R$ all satisfy the order-$k$
+recurrence~\eqref{eq:rec}. Then the Casoratian~\eqref{eq:caso} satisfies the
+first-order law
+\begin{equation}\label{eq:step}
+  \Caso(n+1)=(-1)^{k-1}\,c_0(n)\,\Caso(n)\qquad(n\in\N),
+\end{equation}
+and consequently the closed product form
+\begin{equation}\label{eq:prod}
+  \Caso(n)=\Bigg(\prod_{l=0}^{n-1}(-1)^{k-1}c_0(l)\Bigg)\Caso(0)
+          =(-1)^{(k-1)n}\Bigg(\prod_{l=0}^{n-1}c_0(l)\Bigg)\Caso(0).
+\end{equation}
+Only the lowest coefficient $c_0$ enters; $c_1,\dots,c_{k-1}$ cancel.
+\end{theorem}
+
+\begin{proof}
+Let $\rho$ be the cyclic permutation of $\{0,1,\dots,k-1\}$ that moves every index up
+by one and wraps the top to the bottom, $\rho(i)=i+1$ for $i<k-1$ and
+$\rho(k-1)=0$; it is a single $k$-cycle, so $\sgn\rho=(-1)^{k-1}$. Let $M$ be
+$\Caso(n)$ with its rows permuted by $\rho$, i.e.\ row $i$ of $M$ is row $\rho(i)$ of
+$\Caso(n)$. By the observation in Section~\ref{sec:setup}, the top $k-1$ rows of $M$
+(namely rows $1,\dots,k-1$ of $\Caso(n)$) are exactly the top $k-1$ rows of
+$\Caso(n+1)$, while the bottom row of $M$ is row $0$ of $\Caso(n)$.
+
+Replacing the bottom row of $M$ by the linear combination
+$\sum_{j=0}^{k-1}c_j(n)\,\big(\text{row }j\text{ of }\Caso(n)\big)$ produces exactly
+$\Caso(n+1)$, because that combination is the bottom row of $\Caso(n+1)$ and the top
+rows already agree. Now take determinants. Multilinearity in the replaced row --- the
+content of \texttt{Matrix.det\_updateRow\_sum} --- gives
+\[
+  \det\Caso(n+1)
+   =\sum_{j=0}^{k-1}c_j(n)\,\det\!\big(M\text{ with bottom row }=\text{row }j\text{ of }\Caso(n)\big).
+\]
+Every summand with $j\ge1$ places into the bottom position a row of $\Caso(n)$ that
+already occurs among the top $k-1$ rows of $M$, so that determinant vanishes. Only
+$j=0$ survives, and there the bottom row is the original row $0$ of $\Caso(n)$, so the
+summand is $c_0(n)\,\det M$. Finally $\det M=\sgn\rho\cdot\det\Caso(n)
+=(-1)^{k-1}\det\Caso(n)$. Combining gives~\eqref{eq:step}. A trivial induction on $n$,
+using $\Caso(0)$ as the base case and~\eqref{eq:step} at the inductive step, yields the
+product form~\eqref{eq:prod}.
+\end{proof}
+
+\begin{remark}[What the formalization does, verbatim]\label{rem:lean-proof}
+The Lean development (Section~\ref{sec:lean}) realizes this proof literally. It builds
+$M$ as \texttt{(casoMat\,s\,n).submatrix (finRotate (k+1)) id} (Mathlib's
+\texttt{finRotate} is the cycle $\rho$), expresses $\Caso(n+1)$ as that submatrix with
+its last row updated to the recurrence combination, then rewrites with
+\texttt{Matrix.det\_updateRow\_sum} (the multilinear collapse to the surviving
+coefficient) and \texttt{Matrix.det\_permute} together with \texttt{sign\_finRotate}
+(the cyclic sign). The ``vanishing for $j\ge1$'' step is automatic: it is exactly the
+statement that \texttt{det\_updateRow\_sum} isolates the coefficient indexed by the
+updated row. No analytic input is used; the argument is finitary algebra over an
+arbitrary \texttt{CommRing}.
+\end{remark}
+
+\section{Specializations and consequences}\label{sec:cons}
+
+\begin{corollary}[Constant lowest coefficient]\label{cor:const}
+If $c_0(l)=a$ for all $l$, then $\Caso(n)=\big((-1)^{k-1}a\big)^n\Caso(0)$. In
+particular, if $a$ is a unit (or $1$), the Casoratian never vanishes once
+$\Caso(0)\ne0$.
+\end{corollary}
+
+\begin{corollary}[Non-vanishing / linear-independence certificate]\label{cor:indep}
+Suppose $R$ is an integral domain. If $\Caso(0)\ne0$ and $c_0(l)\ne0$ for every
+$l<n$, then $\Caso(n)\ne0$. Hence if $\Caso(0)\ne0$ and $c_0$ is nowhere zero, the
+$k$ solutions stay linearly independent at every window: $\Caso(n)\ne0$ for all $n$.
+\end{corollary}
+
+\begin{proof}
+Immediate from~\eqref{eq:prod}: a product of nonzero elements of a domain is nonzero,
+and $(-1)^{k-1}$ is a unit.
+\end{proof}
+
+Corollary~\ref{cor:indep} is the order-$k$ analogue of the order-$2$ statement
+$p_{n+1}q_n-p_nq_{n+1}=(-1)^n\ne0$ that underlies Euler's criterion: it is precisely
+the determinantal independence certificate one needs for Hermite--Pad\'e systems.
+
+\begin{proposition}[Low-order witnesses]\label{prop:lowk}
+The cases $k=2,3$ hold and are proved independently by direct cofactor expansion,
+without the permutation argument:
+\[
+  k=2:\quad \Caso(n+1)=-\,c_0(n)\,\Caso(n);
+  \qquad
+  k=3:\quad \Caso(n+1)=+\,c_0(n)\,\Caso(n).
+\]
+The order-$2$ sign $-c_0$ is the corpus sign; its $c_0\equiv1$ instance is the
+constant convergent Wronskian $p_{n+1}q_n-p_nq_{n+1}=(-1)^n$.
+\end{proposition}
+
+These hand proofs (\texttt{caso2\_step}, \texttt{caso3\_step}; the $3\times3$
+cofactor expansion is closed by \texttt{ring}) are retained as \emph{faithfulness
+witnesses}: they agree with Theorem~\ref{thm:ajl} at $k=2,3$, guarding against a
+vacuous or mis-signed general statement.
+
+\section{The machine-checked formalization}\label{sec:lean}
+
+The development is in Lean~4 with Mathlib (toolchain pinned
+\texttt{leanprover/lean4:v4.30.0}, Mathlib \texttt{rev=v4.30.0}). It is built and
+axiom-checked inside the companion \texttt{pcf-delta} \texttt{PcfContinuant}
+project~\cite{pcfdelta}, whose \texttt{Check.lean} gate runs \texttt{\#print axioms}
+on every declaration; the two source files \texttt{GeneralCaso.lean} (the
+uniform-in-$k$ core, namespace \texttt{PcfGeneralCaso}) and \texttt{HigherCaso.lean}
+(the by-hand low-order witnesses, namespace \texttt{PcfHigherCaso}) are mirrored in
+this catalogue under \texttt{verify/}.
+
+\begin{remark}[Index convention]\label{rem:index}
+The formalization parametrizes the order as $k+1$ via \texttt{Fin (k+1)} (so the
+recurrence is $s(n+(k+1))=\sum_{j\le k}c_j(n)s(n+j)$ and the matrix is
+$(k+1)\times(k+1)$); its sign therefore reads $(-1)^{k}$. This is the prose order-$k$
+law~\eqref{eq:step} under $k\mapsto k+1$: an index shift only, with $(-1)^{(k+1)-1}
+=(-1)^k$.
+\end{remark}
+
+\begin{theorem}[Formalized core; \textsc{proven}]\label{thm:lean}
+The following nine declarations are machine-checked with clean axiom cones --- each a
+subset of $\{\texttt{propext},\texttt{Classical.choice},\texttt{Quot.sound}\}$, no
+\texttt{sorryAx}, sources free of \texttt{sorry}/\texttt{admit}/\texttt{native\_decide},
+\texttt{lake build} exit $0$.
+\begin{itemize}\sloppy
+\item \emph{Uniform in $k$} (\texttt{PcfGeneralCaso}, \texttt{GeneralCaso.lean}):
+\texttt{casoMat\_det\_step} is the step law~\eqref{eq:step}
+$\Caso(n+1)=(-1)^{k}c_0(n)\Caso(n)$ (order $k+1$; Remark~\ref{rem:index});
+\texttt{casoMat\_det\_eq} is the closed product form~\eqref{eq:prod};
+\texttt{casoMat\_det\_eq\_const} is the constant-coefficient power form
+(Corollary~\ref{cor:const}); \texttt{casoMat\_det\_ne\_zero\_of\_init} is the
+integral-domain non-vanishing certificate (Corollary~\ref{cor:indep}).
+\item \emph{Low-order witnesses} (\texttt{PcfHigherCaso}, \texttt{HigherCaso.lean}):
+\texttt{caso2\_step} (the order-$2$ sign $-c_0$), \texttt{caso3\_step} (the order-$3$
+step $+c_0$), \texttt{caso3\_eq} (its product form), \texttt{caso3\_eq\_const} (its
+constant-coefficient case), and \texttt{caso3\_ne\_zero\_of\_init} (its domain
+non-vanishing certificate) --- Proposition~\ref{prop:lowk}.
+\end{itemize}
+Of the nine, exactly two close with the minimal cone
+$\{\texttt{propext},\texttt{Quot.sound}\}$ --- the by-hand witnesses
+\texttt{caso2\_step} and \texttt{caso3\_step}; the remaining seven additionally use
+\texttt{Classical.choice}. This \texttt{Classical.choice} usage is inherited from
+Mathlib's general determinant infrastructure (\texttt{Matrix.det} and the underlying
+permutation machinery), not a sign that the uniform-in-$k$ proof is in any meaningful
+sense less constructive than the by-hand cases; we report the cones factually rather
+than rank them.
+\end{theorem}
+
+This follows the program's \emph{unconditional-core} pattern: there is no labelled
+analytic hypothesis here at all, since the statement is pure finitary algebra over a
+\texttt{CommRing} (the domain results add only \texttt{IsDomain\,R}). The Casoratian
+is defined as a genuine \texttt{Matrix} determinant, so the result is the honest
+determinantal identity, not a bespoke $k=2,3$ polynomial expression. Only the
+order-$2$ \emph{step} sign is recorded here, as \texttt{caso2\_step}: the full
+order-$2$ closed-form suite already exists in \texttt{pcf-delta} as
+\texttt{casoratian\_eqG}~\cite{pcfdelta} and is not duplicated, whereas order $3$
+carries the full suite as the smallest genuinely higher-order witness.
+
+\section{Independent symbolic verification}\label{sec:gate}
+
+In keeping with the catalogue's gate-before-Lean discipline, a \texttt{sympy} harness
+(\texttt{harness\_caso\_k.py}) re-derives the law independently of the Lean proof:
+\begin{itemize}
+\item a fully \emph{symbolic} proof at $k=3$: with generic symbolic data and generic
+$c_0,c_1,c_2$, $\det\Caso(1)-c_0\det\Caso(0)$ expands to $0$ and $\det\Caso(1)$ is
+free of $c_1,c_2$ (only $c_0$ enters);
+\item \emph{exact-rational} checks of both the step law~\eqref{eq:step} and the
+product form~\eqref{eq:prod} for $k=2,\dots,7$, over integer-coefficient recurrences
+and initial data drawn from a \emph{fixed deterministic seed}
+(\texttt{random.Random(7k+101t+5)} for trial $t$), so the runs are exactly
+reproducible, confirming the alternating sign $(-1)^{k-1}$; and
+\item named instances: the Tribonacci recurrence $s(n+3)=s(n+2)+s(n+1)+s(n)$ ($c_0\equiv1$)
+has a \emph{constant} Casoratian, and the recurrence with $c_0(n)=n+1$ gives
+$\Caso(n)=n!\,\Caso(0)$ --- both matching~\eqref{eq:prod} exactly.
+\end{itemize}
+All checks pass. The harness and the Lean sources are listed in
+Section~\ref{sec:code}.
+
+\section{Epistemic status}\label{sec:status}
+
+\begin{itemize}
+\item \textbf{PROVEN} (Lean, clean cones; Theorem~\ref{thm:lean}): the uniform-in-$k$
+step law and product form, the constant-coefficient power form, the integral-domain
+non-vanishing certificate, and the order-$2$/order-$3$ witnesses. No analytic input;
+the cones are subsets of $\{\texttt{propext},\texttt{Classical.choice},
+\texttt{Quot.sound}\}$ with no \texttt{sorryAx}.
+\item \textbf{VERIFIED} (numerically/symbolically; Section~\ref{sec:gate}): the law at
+$k=3$ symbolically and for $k=2,\dots,7$ by exact-rational checks, plus the named
+instances.
+\item \textbf{STRUCTURAL} (classical; formalization pending): the
+\emph{fundamental-system converse} --- that when $\Caso(n_0)$ is a unit (over a domain,
+with $c_0$ invertible) every solution of~\eqref{eq:rec} is an $R$-linear combination of
+the $s^{(t)}$. This is the classical fundamental-set theorem
+(\cite[Ch.~2]{elaydi}); over a field it is immediate from the solution space being
+pinned by the first $k$ values, as Mathlib's \texttt{LinearRecurrence} already encodes
+in the constant-coefficient case~\cite{mathlib}. We have not yet formalized it in the
+present uniform-in-$k$, time-varying setting.
+\item \textbf{CONJECTURED / open}: a concrete simultaneous-Hermite--Pad\'e PCF whose
+order-$3$ Casoratian, via Corollary~\ref{cor:indep}, furnishes an Ap\'ery-style
+irrationality certificate. This is the genuinely open next entry; the present note ---
+together with the converse above --- supplies the determinantal machinery it will rely
+on.
+\end{itemize}
+We claim no novelty for Abel's formula itself, which is classical
+(\cite[Ch.~2]{elaydi},\cite{kelleypeterson},\cite{milnethomson}); the contribution is the
+uniform-in-$k$ machine-checked proof and the opening of the order-$\ge3$ direction in
+this corpus.
+
+\section{Relation to prior work and novelty}\label{sec:related}
+
+\paragraph{Formal-methods landscape.}
+The two standard formal-library treatments of linear recurrences both target the
+\emph{constant-coefficient} solution theory, not the Casoratian evolution law.
+Mathlib's \texttt{LinearRecurrence}~\cite{mathlib} fixes an order and a tuple of
+\emph{constant} coefficients \texttt{coeffs : Fin order $\to$ R}, builds the solution
+submodule of $\N\to R$, the \texttt{LinearEquiv} sending a solution to its first
+\texttt{order} terms (so solutions are pinned by their initial data), and the
+characteristic polynomial; it defines no Casoratian and proves no Abel-type evolution
+law. Eberl's \emph{Linear Recurrences} entry in the Isabelle Archive of Formal
+Proofs~\cite{eberl} develops constant-coefficient recurrences via formal power series
+and polynomial factorisation into an executable closed-form solver, again without the
+Casoratian/Abel identity. Our object is complementary and, in one direction, strictly
+more general: the coefficients $c_j(n)$ are arbitrary functions of $n$ (time-varying),
+the Casoratian is a genuine \texttt{Matrix} determinant, and the theorem is the
+determinantal evolution law uniform in the order $k$ --- exactly the
+non-vanishing / linear-independence certificate (Corollary~\ref{cor:indep}) that
+Hermite--Pad\'e and Ap\'ery-type constructions consume (\cite{vdpoorten,beukers}). A
+machine-checked Casoratian does already exist for the order-$2$ case in another system:
+the Coq/MathComp formal proof of the irrationality of $\zeta(3)$~\cite{apery} defines
+the $2\times2$ Wronskian \texttt{ba\_casoratian} of the two Ap\'ery sequences and
+derives its first-order (Abel) law, but only for that concrete instance --- indeed its
+source remarks that the order-$1$ recurrence ``should be obtained from something more
+general.'' Having searched Mathlib, the Isabelle AFP, and the Coq/MathComp ecosystem by
+name (\emph{Casoratian}, \emph{Wronskian}) and by structure, we find no
+\emph{general-order, uniform-in-$k$} Casoratian Abel formula with time-varying
+coefficients --- precisely the ``something more general'' the Ap\'ery formalization
+lacked --- which is what the present note provides and machine-checks.
+
+\paragraph{Within this corpus, and a note on hosting.}
+The deposited corpus had formalized the Casoratian only in its order-$2$ form --- the
+$4/\pi$ PCF Casoratian closed form (Theorem~6.3 of the ladder paper~\cite{ladder};
+machine-verified in~\cite{caso2lean}) and the general order-$2$
+\texttt{casoratian\_eqG} in \texttt{pcf-delta}~\cite{pcfdelta} --- so this is the
+program's first order-$\ge3$ result and the backbone of a planned Hermite--Pad\'e /
+Ap\'ery line. We deposit it as a standalone catalogue entry rather than as a Mathlib
+pull request for two reasons: the result is more general than Mathlib's
+constant-coefficient \texttt{LinearRecurrence} API and would need new
+time-varying-coefficient scaffolding to land there, and the corpus requires the core
+to be hosted and cone-gated inside \texttt{pcf-delta}'s \texttt{Check.lean}. A Mathlib
+contribution --- a \texttt{Casoratian} determinant and its Abel evolution law,
+specialising to \texttt{LinearRecurrence} in the constant-coefficient case --- is a
+natural next step and would convert ``not otherwise available'' into an externally
+reviewed library lemma. For the record, the Lean and \texttt{sympy} sources label this
+identity ``Abel--Jacobi--Liouville''; the standard discrete name, used here, is Abel's
+formula (Elaydi~\cite{elaydi}), the triple form naming the continuous-Wronskian
+analogue (Liouville / Jacobi). The note supplements the SIARC program~\cite{siarc}.
+
+\section{Code and data availability}\label{sec:code}
+
+\begin{sloppypar}
+The Lean sources are \texttt{verify/GeneralCaso.lean} (namespace
+\texttt{PcfGeneralCaso}) and \texttt{verify/HigherCaso.lean} (namespace
+\texttt{PcfHigherCaso}); they are built and axiom-cone-checked inside the
+\texttt{pcf-delta} \texttt{PcfContinuant} project~\cite{pcfdelta} via
+\texttt{lake env lean Check.lean} (toolchain \texttt{leanprover/lean4:v4.30.0},
+Mathlib \texttt{rev=v4.30.0}). The independent symbolic gate is
+\texttt{harness\_caso\_k.py} (\texttt{sympy}~\cite{sympy}; run
+\texttt{python harness\_caso\_k.py}), which prints the $k=3$ symbolic proof, the
+exact-rational $k=2,\dots,7$ verification, and the named instances. Public repository:
+\url{https://github.com/papanokechi/pcf-casoratian-catalogue}.
+\end{sloppypar}
+
+\begin{thebibliography}{99}
+
+\bibitem{elaydi}
+S.~Elaydi,
+\emph{An Introduction to Difference Equations}, 3rd ed.,
+Undergraduate Texts in Mathematics, Springer, 2005.
+The Casoratian and Abel's lemma for its evolution under variable coefficients are
+treated in Ch.~2 (linear difference equations; linear independence of solutions).
+
+\bibitem{kelleypeterson}
+W.~G.~Kelley and A.~C.~Peterson,
+\emph{Difference Equations: An Introduction with Applications},
+Academic Press, 1991. Casoratian (discrete Wronskian) and the linear-independence
+theory for linear difference equations.
+
+\bibitem{milnethomson}
+L.~M.~Milne-Thomson,
+\emph{The Calculus of Finite Differences},
+Macmillan, 1933 (reprinted, AMS Chelsea Publishing).
+A classical treatment of the Casoratian and linear difference equations.
+
+\bibitem{vdpoorten}
+A.~J.~van der Poorten,
+\emph{A proof that Euler missed\ldots\ Ap\'ery's proof of the irrationality of
+$\zeta(3)$},
+The Mathematical Intelligencer \textbf{1}(4) (1979), 195--203.
+DOI \texttt{10.1007/BF03028234} (\url{https://doi.org/10.1007/BF03028234}).
+The Hermite--Pad\'e / simultaneous-approximation context in which higher-order
+Casoratians arise.
+
+\bibitem{beukers}
+F.~Beukers,
+\emph{A note on the irrationality of $\zeta(2)$ and $\zeta(3)$},
+Bull.\ London Math.\ Soc.\ \textbf{11}(3) (1979), 268--272.
+DOI \texttt{10.1112/blms/11.3.268} (\url{https://doi.org/10.1112/blms/11.3.268}).
+A Pad\'e / Legendre-polynomial route to Ap\'ery's irrationality theorems --- the
+higher-order-recurrence setting in which Casoratians certify independence.
+
+\bibitem{mathlib}
+The mathlib Community,
+\emph{The Lean Mathematical Library},
+in: Proc.\ 9th ACM SIGPLAN Int.\ Conf.\ on Certified Programs and Proofs (CPP~2020),
+ACM, 2020, 123--135. DOI \texttt{10.1145/3372885.3373824}
+(\url{https://doi.org/10.1145/3372885.3373824}).
+
+\bibitem{lean4}
+L.~de~Moura and S.~Ullrich,
+\emph{The Lean~4 Theorem Prover and Programming Language},
+in: Automated Deduction --- CADE~28, Lecture Notes in Computer Science \textbf{12699},
+Springer, 2021, 625--635. DOI \texttt{10.1007/978-3-030-79876-5\_37}
+(\url{https://doi.org/10.1007/978-3-030-79876-5_37}).
+
+\bibitem{sympy}
+A.~Meurer et al.,
+\emph{SymPy: symbolic computing in Python},
+PeerJ Computer Science \textbf{3} (2017), e103.
+DOI \texttt{10.7717/peerj-cs.103} (\url{https://doi.org/10.7717/peerj-cs.103}).
+
+\bibitem{eberl}
+M.~Eberl,
+\emph{Linear Recurrences},
+Archive of Formal Proofs, March 2017.
+\url{https://www.isa-afp.org/entries/Linear_Recurrences.html}.
+An Isabelle/HOL formalization of constant-coefficient linear recurrences and an
+executable closed-form solver (no Casoratian / Abel evolution law).
+
+\bibitem{apery}
+F.~Chyzak, A.~Mahboubi, T.~Sibut-Pinote, and E.~Tassi,
+\emph{A Computer-Algebra-Based Formal Proof of the Irrationality of $\zeta(3)$},
+in: Interactive Theorem Proving (ITP~2014), Lecture Notes in Computer Science,
+Springer, 2014, 160--176. DOI \texttt{10.1007/978-3-319-08970-6\_11}
+(\url{https://doi.org/10.1007/978-3-319-08970-6_11}).
+The Coq/MathComp development (\texttt{coq-community/apery}) defines a concrete
+order-$2$ Casoratian \texttt{ba\_casoratian} and its first-order law.
+
+\bibitem{caso2lean}
+Papanokechi,
+\emph{Machine-verified Lean~4/Mathlib formalization of the Casoratian closed form
+(Theorem~6.3) for a $4/\pi$ polynomial continued fraction}, 2026.
+The order-$2$ predecessor this note extends. Zenodo concept DOI
+\texttt{10.5281/zenodo.20500490} (\url{https://doi.org/10.5281/zenodo.20500490}).
+
+\bibitem{ladder}
+Papanokechi,
+\emph{Polynomial Continued Fractions: a Proved Logarithmic Ladder, a $4/\pi$
+Casoratian Identity, and 482 Irrational Constants}, 2026.
+Zenodo concept DOI \texttt{10.5281/zenodo.19491767}
+(\url{https://doi.org/10.5281/zenodo.19491767}).
+
+\bibitem{pcfdelta}
+Papanokechi,
+\emph{pcf-delta: the growth-law correction constant $\delta=\log R_\infty$ of the
+quadratic polynomial continued fraction}, 2026.
+Hosts and builds the Lean \texttt{PcfContinuant} project and \texttt{Check.lean} gate
+in which the present core is cone-checked. Zenodo concept DOI
+\texttt{10.5281/zenodo.20578400} (\url{https://doi.org/10.5281/zenodo.20578400}).
+
+\bibitem{siarc}
+Papanokechi,
+\emph{SIARC: a program statement for structured, incrementally-audited research on
+continued fractions}, 2026.
+Zenodo concept DOI \texttt{10.5281/zenodo.19885549}
+(\url{https://doi.org/10.5281/zenodo.19885549}).
+
+\end{thebibliography}
+
+\paragraph{AI-assistance disclosure.}
+Prepared with AI assistance (GitHub Copilot; Anthropic Claude) for drafting,
+computer-algebra verification, and manuscript preparation. All numerical values were
+obtained by running the scripts named in the Code and Data Availability section; the
+Lean axiom cones were obtained by \texttt{\#print axioms}. The author takes
+responsibility for the content and for the placement of each claim within the
+four-grade epistemic partition.
+
+\end{document}

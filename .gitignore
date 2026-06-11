@@ -21,6 +21,15 @@ venv/
 .DS_Store
 Thumbs.db
 
+# LaTeX transients (regenerable; keep .tex + .pdf only)
+*.aux
+*.log
+*.out
+*.fls
+*.fdb_latexmk
+*.toc
+*.synctex.gz
+
 # Local scratch
 COMMIT_MSG.txt
 *_scratch.*

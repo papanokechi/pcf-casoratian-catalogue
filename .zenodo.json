@@ -1,0 +1,55 @@
+{
+  "upload_type": "software",
+  "title": "pcf-casoratian-catalogue: A machine-verified higher-order (order \u2265 3, uniform in k) Casoratian law for linear recurrences \u2014 the Abel\u2013Jacobi\u2013Liouville identity C(n+1) = (\u22121)^(k\u22121) c\u2080(n) C(n) in Lean 4 / Mathlib",
+  "version": "0.1.0",
+  "language": "eng",
+  "license": "Apache-2.0",
+  "creators": [
+    {
+      "name": "Papanokechi",
+      "orcid": "0009-0000-6192-8273"
+    }
+  ],
+  "description": "<p>The <strong>higher-order (order &ge; 3) Casoratian law</strong> for a homogeneous linear recurrence, formalized to a clean axiom cone in Lean 4 / Mathlib. For the order-<em>k</em> recurrence <em>s(n+k) = &sum;<sub>j=0</sub><sup>k&minus;1</sup> c<sub>j</sub>(n) s(n+j)</em>, the order-<em>k</em> Casoratian (the <em>k&times;k</em> discrete Wronskian of <em>k</em> solutions) <em>C(n) = det[ s<sup>(t)</sup>(n+i) ]<sub>0&le;i,t&lt;k</sub></em> obeys the first-order Abel&ndash;Jacobi&ndash;Liouville law <em>C(n+1) = (&minus;1)<sup>k&minus;1</sup> c<sub>0</sub>(n) C(n)</em>, hence the closed product form <em>C(n) = ( &prod;<sub>m&lt;n</sub> (&minus;1)<sup>k&minus;1</sup> c<sub>0</sub>(m) ) C(0)</em>. Only the lowest coefficient <em>c<sub>0</sub></em> survives; <em>c<sub>1</sub> &hellip; c<sub>k&minus;1</sub></em> cancel. At <em>k = 2</em> the sign is the corpus <em>&minus;c<sub>0</sub></em>; at <em>k = 3</em> it flips to <em>+c<sub>0</sub></em>. The (&minus;1)<sup>k&minus;1</sup> sign is now established as a <strong>single uniform theorem over all <em>k</em></strong>, not merely the <em>k</em> = 2, 3 instances.</p><p><strong>Why it matters.</strong> The deposited corpus formalized only order-2 (three-term) Casoratians; this is the first order-&ge;3 result. The higher-order Casoratian is the algebraic backbone of simultaneous / Hermite&ndash;Pad&eacute; approximation &mdash; the engine of Ap&eacute;ry-type irrationality proofs.</p><p><strong>Contents (catalogue entry C1).</strong> Nine Lean theorems across two namespaces. The uniform-in-<em>k</em> core (namespace <code>PcfGeneralCaso</code>, <code>GeneralCaso.lean</code>): <code>casoMat_det_step</code> (the general step <em>C(n+1) = (&minus;1)<sup>k</sup> c<sub>0</sub>(n) C(n)</em> for the order-<em>(k+1)</em> Casoratian, proved by rewriting the last row via the recurrence into a combination of the cyclically rotated rows of <em>C(n)</em> &mdash; <code>Matrix.det_updateRow_sum</code> collapses it to the <em>c<sub>0</sub></em> coefficient and <code>sign_finRotate</code> supplies the cyclic sign), <code>casoMat_det_eq</code> (uniform closed product form), <code>casoMat_det_eq_const</code> (constant-<em>c<sub>0</sub></em> power form), and <code>casoMat_det_ne_zero_of_init</code> (integral-domain non-degeneracy at all <em>k</em>). The by-hand low-order witnesses (namespace <code>PcfHigherCaso</code>): <code>caso3_step</code> (the order-3 step law), <code>caso3_eq</code> (closed product form), <code>caso3_eq_const</code> (constant-<em>c<sub>0</sub></em> case <em>C(n)=c<sub>0</sub><sup>n</sup> C(0)</em>), <code>caso3_ne_zero_of_init</code> (a non-degeneracy / linear-independence certificate over an integral domain), and <code>caso2_step</code> (the order-2 sign <em>&minus;c<sub>0</sub></em> recovered as a faithfulness witness). A sympy gate (<code>harness_caso_k.py</code>): a fully symbolic proof at <em>k=3</em> plus exact-rational verification <em>k=2..7</em> plus named instances (the Tribonacci recurrence <em>c<sub>0</sub>&equiv;1</em> &rarr; constant Casoratian; <em>c<sub>0</sub>(n)=n+1</em> &rarr; <em>C(n)=n! C(0)</em>).</p><p><strong>Epistemic status (SIARC four-class) &mdash; PROVEN.</strong> Each of the nine theorems was rechecked from source with <code>lake env lean Check.lean</code> under the pinned <code>leanprover/lean4:v4.30.0</code> + Mathlib <code>v4.30.0</code> toolchain: every axiom cone is a subset of {propext, Classical.choice, Quot.sound} (the two <code>_step</code> lemmas need only {propext, Quot.sound}), with no <code>sorryAx</code> and no <code>sorry</code>/<code>admit</code>/<code>native_decide</code> in source. The Lean core is built and cone-checked inside the companion <code>pcf-delta</code> <code>PcfContinuant</code> project, where it is cross-listed in <code>Check.lean</code> alongside the order-2 general Casoratian (<code>casoratian_eqG</code>).</p><p><strong>Open / next (CONJECTURED).</strong> A concrete simultaneous-Hermite&ndash;Pad&eacute; PCF whose order-3 Casoratian furnishes an Ap&eacute;ry-style irrationality certificate. The (&minus;1)<sup>k&minus;1</sup> uniform-<em>k</em> sign theorem, previously listed open here, is now <strong>PROVEN</strong> (<code>casoMat_det_step</code>; clean cone, gate-checked for all <em>k</em>).</p>",
+  "keywords": [
+    "polynomial continued fractions",
+    "Casoratian",
+    "discrete Wronskian",
+    "higher-order linear recurrence",
+    "Hermite-Pade approximation",
+    "simultaneous approximation",
+    "Abel-Jacobi-Liouville formula",
+    "Apery-type irrationality",
+    "Lean 4",
+    "Mathlib",
+    "formal verification",
+    "SIARC"
+  ],
+  "related_identifiers": [
+    {
+      "relation": "continues",
+      "identifier": "10.5281/zenodo.20500490",
+      "scheme": "doi",
+      "resource_type": "software"
+    },
+    {
+      "relation": "isSupplementTo",
+      "identifier": "10.5281/zenodo.19491767",
+      "scheme": "doi",
+      "resource_type": "publication-preprint"
+    },
+    {
+      "relation": "isPartOf",
+      "identifier": "10.5281/zenodo.20578400",
+      "scheme": "doi",
+      "resource_type": "publication-preprint"
+    },
+    {
+      "relation": "isPartOf",
+      "identifier": "10.5281/zenodo.19885549",
+      "scheme": "doi",
+      "resource_type": "publication-preprint"
+    }
+  ],
+  "notes": "ORCID (0009-0000-6192-8273) is source-verified. STATUS: NOT YET DEPOSITED -- this metadata is documentation only, drafted 2026-06-10; deposit is OPERATOR-GATED and no Zenodo record, version DOI, concept DOI, or GitHub release has been minted. The version/concept DOIs will be minted by hand at deposit time. RELATED IDENTIFIERS (all verified live via doi.org 302 redirect to zenodo.org on 2026-06-10, not asserted from memory): (continues) 10.5281/zenodo.20500490 -- the order-2 Casoratian Lean formalization (Zenodo API resource_type software, version record 20500491, title 'Machine-verified Lean 4 / Mathlib formalization of the Casoratian closed form (Theorem 6.3) for a 4/pi polynomial continued fraction', creator ORCID 0009-0000-6192-8273); C1 is the order->=3 extension of this order-2 result. (isSupplementTo) 10.5281/zenodo.19491767 -- the deposited ladder paper 'Polynomial Continued Fractions: A Proved Logarithmic Ladder, a 4/pi Casoratian Identity, and 482 Irrational Constants' (version record 19491768, resource_type publication). (isPartOf) 10.5281/zenodo.20578400 -- companion pcf-delta, which hosts and builds the Lean core (version record 20593930, resource_type publication/preprint). (isPartOf) 10.5281/zenodo.19885549 -- the SIARC program statement (version record 20114861, resource_type publication/preprint). GATE STATUS (confirmed from source, not asserted from memory): on 2026-06-10 the nine theorems -- PcfHigherCaso.caso2_step, caso3_step, caso3_eq, caso3_eq_const, caso3_ne_zero_of_init and PcfGeneralCaso.casoMat_det_step, casoMat_det_eq, casoMat_det_eq_const, casoMat_det_ne_zero_of_init -- were rechecked with 'lake env lean Check.lean' in the pcf-delta PcfContinuant project (toolchain leanprover/lean4:v4.30.0, Mathlib v4.30.0; lake build exit 0, 1975 jobs); all axiom cones are subsets of {propext, Classical.choice, Quot.sound} (the order-2/3 _step lemmas: {propext, Quot.sound}), no sorryAx, and verify/HigherCaso.lean and verify/GeneralCaso.lean contain no sorry/admit/native_decide. PcfGeneralCaso.casoMat_det_step is the uniform-in-k general-order law C(n+1)=(-1)^k c_0(n) C(n) for the order-(k+1) Casoratian, promoting the previously-open general-k sign item to PROVEN. NOVELTY: a scan of the depositor's 36 public Zenodo records on 2026-06-10 found no order->=3 / higher-order Casoratian, Hermite-Pade, simultaneous-approximation, or Wronskian-of-three deposit; the only Casoratian deposits are order-2 (10.5281/zenodo.20500490 and the ladder paper 10.5281/zenodo.19491767). LICENSE: Apache-2.0, uniform -- the repository is a Lean formalization plus a sympy harness with no separate paper unit (upload_type software). Public GitHub repo https://github.com/papanokechi/pcf-casoratian-catalogue; this .zenodo.json is documentation only and is not wired to a release webhook. DISCIPLINE: do NOT deposit without operator sign-off."
+}

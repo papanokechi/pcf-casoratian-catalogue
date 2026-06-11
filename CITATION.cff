@@ -1,0 +1,96 @@
+cff-version: 1.2.0
+message: "If you use this work, please cite it using the metadata below."
+type: software
+title: "pcf-casoratian-catalogue: A machine-verified higher-order (order >= 3, uniform in k) Casoratian law for linear recurrences - the Abel-Jacobi-Liouville identity C(n+1) = (-1)^(k-1) c_0(n) C(n) in Lean 4 / Mathlib"
+abstract: >-
+  The higher-order (order >= 3, uniform in k) Casoratian law for a homogeneous linear
+  recurrence, formalized to a clean axiom cone in Lean 4 / Mathlib. For the
+  order-k recurrence s(n+k) = sum_{j=0}^{k-1} c_j(n) s(n+j), the order-k
+  Casoratian (the k x k discrete Wronskian of k solutions)
+  C(n) = det[ s^(t)(n+i) ]_{0 <= i,t < k} obeys the first-order
+  Abel-Jacobi-Liouville law C(n+1) = (-1)^(k-1) c_0(n) C(n), hence the closed
+  product form C(n) = ( prod_{m<n} (-1)^(k-1) c_0(m) ) C(0). Only the lowest
+  coefficient c_0 survives; c_1 ... c_{k-1} cancel. At k = 2 the sign is the
+  corpus -c_0; at k = 3 it flips to +c_0. The (-1)^(k-1) sign is now established as a single uniform theorem over all k, not merely k = 2, 3. The deposited corpus formalized only
+  order-2 (three-term) Casoratians; this is the first order->=3 result - the
+  algebraic backbone of simultaneous / Hermite-Pade approximation, the engine of
+  Apery-type irrationality proofs. Catalogue entry C1 provides nine Lean theorems across two namespaces (uniform-in-k namespace PcfGeneralCaso: casoMat_det_step, casoMat_det_eq, casoMat_det_eq_const, casoMat_det_ne_zero_of_init; by-hand low-order namespace PcfHigherCaso: caso3_step, caso3_eq, caso3_eq_const,
+  caso3_ne_zero_of_init, and caso2_step as an order-2 faithfulness witness) plus a
+  sympy gate (harness_caso_k.py: a symbolic proof at k=3, exact-rational
+  verification k=2..7, and named instances). Epistemic status (SIARC four-class):
+  PROVEN - each theorem's axiom cone is a subset of {propext, Classical.choice,
+  Quot.sound} (the two _step lemmas need only {propext, Quot.sound}), with no
+  sorryAx and no sorry/admit/native_decide, rechecked from source with
+  'lake env lean Check.lean' under the pinned leanprover/lean4:v4.30.0 + Mathlib
+  v4.30.0 toolchain inside the companion pcf-delta PcfContinuant project.
+authors:
+  # ORCID source-verified from the ORCID registry page.
+  - family-names: "Papanokechi"
+    orcid: "https://orcid.org/0009-0000-6192-8273"
+version: "0.1.0"
+date-released: "2026-06-10"
+license: Apache-2.0
+repository-code: "https://github.com/papanokechi/pcf-casoratian-catalogue"
+keywords:
+  - "polynomial continued fractions"
+  - "Casoratian"
+  - "discrete Wronskian"
+  - "higher-order linear recurrence"
+  - "Hermite-Pade approximation"
+  - "simultaneous approximation"
+  - "Abel-Jacobi-Liouville formula"
+  - "Apery-type irrationality"
+  - "Lean 4"
+  - "Mathlib"
+  - "formal verification"
+  - "SIARC"
+references:
+  # The order-2 Casoratian Lean formalization that entry C1 extends to order >= 3.
+  # Concept (cite-all) DOI; resource_type software (Zenodo API, version record
+  # 20500491); verified live (doi.org 302 -> zenodo.org) 2026-06-10.
+  - type: software
+    title: "Machine-verified Lean 4 / Mathlib formalization of the Casoratian closed form (Theorem 6.3) for a 4/pi polynomial continued fraction"
+    authors:
+      - family-names: "Papanokechi"
+        orcid: "https://orcid.org/0009-0000-6192-8273"
+    doi: "10.5281/zenodo.20500490"
+    notes: "Order-2 predecessor; entry C1 continues this to order >= 3. relation: continues."
+    year: 2026
+  # The deposited ladder paper (context). Concept DOI; version record 19491768;
+  # verified live 2026-06-10.
+  - type: article
+    title: "Polynomial Continued Fractions: A Proved Logarithmic Ladder, a 4/pi Casoratian Identity, and 482 Irrational Constants"
+    authors:
+      - family-names: "Papanokechi"
+    doi: "10.5281/zenodo.19491767"
+    notes: "Order-2 Casoratian identity context. relation: isSupplementTo."
+    year: 2026
+  # Companion pcf-delta: hosts and builds the Lean core (PcfContinuant + Check.lean
+  # gate). Concept DOI; version record 20593930; verified live 2026-06-10.
+  - type: article
+    title: "pcf-delta: The growth-law correction constant delta = log R_inf of the quadratic polynomial continued fraction"
+    authors:
+      - family-names: "Papanokechi"
+        orcid: "https://orcid.org/0009-0000-6192-8273"
+    doi: "10.5281/zenodo.20578400"
+    notes: "Hosts and builds the Lean core. relation: isPartOf."
+    year: 2026
+  # SIARC program statement. Concept DOI; version record 20114861; verified live
+  # 2026-06-10.
+  - type: article
+    title: "An Arithmetic Stratification of Polynomial Continued Fractions: Program Statement of the SIARC Series"
+    authors:
+      - family-names: "Papanokechi"
+    doi: "10.5281/zenodo.19885549"
+    notes: "Umbrella research program. relation: isPartOf."
+    year: 2026
+# STATUS: NOT YET DEPOSITED. This CITATION.cff is documentation only, drafted
+# 2026-06-10. Deposit is OPERATOR-GATED: no Zenodo record, version DOI, concept DOI,
+# or GitHub release has been minted. The top-level doi:/identifiers: block is
+# deliberately omitted until a concept DOI is minted by hand at deposit time; add it
+# then (concept = cite-all, plus a version DOI per release), mirroring the pcf-delta
+# convention. All four reference DOIs above were verified live via doi.org 302
+# redirect to zenodo.org on 2026-06-10 (not asserted from memory). License Apache-2.0,
+# uniform (Lean formalization + sympy harness; no separate paper unit). Public GitHub
+# repo https://github.com/papanokechi/pcf-casoratian-catalogue. Do NOT deposit without
+# operator sign-off.
