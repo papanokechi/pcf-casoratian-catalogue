@@ -27,8 +27,8 @@ authors:
   # ORCID source-verified from the ORCID registry page.
   - family-names: "Papanokechi"
     orcid: "https://orcid.org/0009-0000-6192-8273"
-version: "0.1.0"
-date-released: "2026-06-10"
+version: "0.1.1"
+date-released: "2026-06-11"
 license: Apache-2.0
 repository-code: "https://github.com/papanokechi/pcf-casoratian-catalogue"
 keywords:
@@ -90,7 +90,10 @@ references:
 # deliberately omitted until a concept DOI is minted by hand at deposit time; add it
 # then (concept = cite-all, plus a version DOI per release), mirroring the pcf-delta
 # convention. All four reference DOIs above were verified live via doi.org 302
-# redirect to zenodo.org on 2026-06-10 (not asserted from memory). License Apache-2.0,
-# uniform (Lean formalization + sympy harness; no separate paper unit). Public GitHub
+# redirect to zenodo.org on 2026-06-10 (not asserted from memory). License: code is
+# Apache-2.0 (Lean formalization + sympy harness); the repo now ALSO ships the documenting
+# manuscript higher_casoratian.tex/.pdf (entry C1), so the earlier "no separate paper unit"
+# note no longer holds; a distinct CC-BY-4.0 document license for the PDF is an operator
+# decision at mint. Public GitHub
 # repo https://github.com/papanokechi/pcf-casoratian-catalogue. Do NOT deposit without
 # operator sign-off.
