@@ -22,7 +22,7 @@
 for the Casoratian, in Lean~4/Mathlib}
 \author{Papanokechi\\
 \small ORCID: \href{https://orcid.org/0009-0000-6192-8273}{0009-0000-6192-8273}}
-\date{June 2026 \quad(\texttt{pcf-casoratian-catalogue} v0.1.2)}
+\date{June 2026 \quad(\texttt{pcf-casoratian-catalogue} v0.1.3)}
 
 \begin{document}
 \maketitle
@@ -339,9 +339,14 @@ the $s^{(t)}$. This is the classical fundamental-set theorem
 (\cite[Ch.~2]{elaydi}); over a field it is immediate from the solution space being
 pinned by the first $k$ values, as Mathlib's \texttt{LinearRecurrence} already encodes
 in the constant-coefficient case~\cite{mathlib}. Over a general commutative ring it is
-less automatic --- one needs $c_0$ a unit (equivalently $\Caso(n_0)$ invertible over a
-domain) for the initial-value system to be solvable --- which is exactly why we record
-it here as \textsc{structural} rather than asserting it in that generality. We have not
+less automatic, and two \emph{distinct} hypotheses enter: one needs $c_0$ to be a unit
+(so the recurrence is reversible and its solution set is a free $R$-module of rank $k$,
+pinned by any $k$ consecutive values), and one needs $\Caso(n_0)$ to be a unit (so the
+chosen solutions $s^{(0)},\dots,s^{(k-1)}$ actually span that module at the window
+$n_0$). The two interact through the step law~\eqref{eq:step} --- with $c_0$ a unit at
+every step, $\Caso$ is a unit at one window iff at all --- but neither implies the
+other. This is exactly why we record the converse here as \textsc{structural} rather
+than asserting it in that generality. We have not
 yet formalized it in the present uniform-in-$k$, time-varying setting.
 \item \textbf{CONJECTURED / open}: a concrete simultaneous-Hermite--Pad\'e PCF whose
 order-$3$ Casoratian, via Corollary~\ref{cor:indep}, furnishes an Ap\'ery-style
@@ -379,7 +384,7 @@ the $2\times2$ Wronskian \texttt{ba\_casoratian} of the two Ap\'ery sequences an
 derives its first-order (Abel) law, but only for that concrete instance --- indeed its
 source remarks that the order-$1$ recurrence ``should be obtained from something more
 general.'' Having searched Mathlib, the Isabelle AFP, and the Coq/MathComp ecosystem by
-name (\emph{Casoratian}, \emph{Wronskian}) and by structure, we find no
+name (\emph{Casoratian}, \emph{Wronskian}) and by structure (as of June~2026), we find no
 \emph{machine-checked} general-order, uniform-in-$k$ Casoratian Abel formula with
 time-varying coefficients in any of these systems --- precisely the ``something more
 general'' the Ap\'ery formalization lacked. The \emph{identity} itself is of course
@@ -468,7 +473,7 @@ higher-order-recurrence setting in which Casoratians certify independence.
 The mathlib Community,
 \emph{The Lean Mathematical Library},
 in: Proc.\ 9th ACM SIGPLAN Int.\ Conf.\ on Certified Programs and Proofs (CPP~2020),
-ACM, 2020, 123--135. DOI \texttt{10.1145/3372885.3373824}
+ACM, 2020, 367--381. DOI \texttt{10.1145/3372885.3373824}
 (\url{https://doi.org/10.1145/3372885.3373824}).
 
 \bibitem{lean4}
@@ -487,7 +492,7 @@ DOI \texttt{10.7717/peerj-cs.103} (\url{https://doi.org/10.7717/peerj-cs.103}).
 \bibitem{eberl}
 M.~Eberl,
 \emph{Linear Recurrences},
-Archive of Formal Proofs, March 2017.
+Archive of Formal Proofs, October 2017.
 \url{https://www.isa-afp.org/entries/Linear_Recurrences.html}.
 An Isabelle/HOL formalization of constant-coefficient linear recurrences and an
 executable closed-form solver (no Casoratian / Abel evolution law).
@@ -534,10 +539,11 @@ Zenodo concept DOI \texttt{10.5281/zenodo.19885549}
 
 \paragraph{AI-assistance disclosure.}
 Prepared with AI assistance (GitHub Copilot; Anthropic Claude) for drafting,
-computer-algebra verification, and manuscript preparation. All numerical values were
-obtained by running the scripts named in the Code and Data Availability section; the
-Lean axiom cones were obtained by \texttt{\#print axioms}. The author takes
-responsibility for the content and for the placement of each claim within the
-four-grade epistemic partition.
+computer-algebra verification, and manuscript preparation. All symbolic and
+exact-rational checks were obtained by running the scripts named in the Code and Data
+Availability section; the Lean axiom cones were obtained by \texttt{\#print axioms}. The
+author takes responsibility for the content and for the placement of each claim within
+the four-grade epistemic partition. No AI system is credited as an author, and all
+AI-assisted text and computations were checked by the author.
 
 \end{document}
