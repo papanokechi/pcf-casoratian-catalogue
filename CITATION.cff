@@ -27,7 +27,7 @@ authors:
   # ORCID source-verified from the ORCID registry page.
   - family-names: "Papanokechi"
     orcid: "https://orcid.org/0009-0000-6192-8273"
-version: "0.1.1"
+version: "0.1.2"
 date-released: "2026-06-11"
 license: Apache-2.0
 repository-code: "https://github.com/papanokechi/pcf-casoratian-catalogue"

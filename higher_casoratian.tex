@@ -22,7 +22,7 @@
 for the Casoratian, in Lean~4/Mathlib}
 \author{Papanokechi\\
 \small ORCID: \href{https://orcid.org/0009-0000-6192-8273}{0009-0000-6192-8273}}
-\date{June 2026 \quad(\texttt{pcf-casoratian-catalogue} v0.1.1)}
+\date{June 2026 \quad(\texttt{pcf-casoratian-catalogue} v0.1.2)}
 
 \begin{document}
 \maketitle
@@ -338,8 +338,11 @@ with $c_0$ invertible) every solution of~\eqref{eq:rec} is an $R$-linear combina
 the $s^{(t)}$. This is the classical fundamental-set theorem
 (\cite[Ch.~2]{elaydi}); over a field it is immediate from the solution space being
 pinned by the first $k$ values, as Mathlib's \texttt{LinearRecurrence} already encodes
-in the constant-coefficient case~\cite{mathlib}. We have not yet formalized it in the
-present uniform-in-$k$, time-varying setting.
+in the constant-coefficient case~\cite{mathlib}. Over a general commutative ring it is
+less automatic --- one needs $c_0$ a unit (equivalently $\Caso(n_0)$ invertible over a
+domain) for the initial-value system to be solvable --- which is exactly why we record
+it here as \textsc{structural} rather than asserting it in that generality. We have not
+yet formalized it in the present uniform-in-$k$, time-varying setting.
 \item \textbf{CONJECTURED / open}: a concrete simultaneous-Hermite--Pad\'e PCF whose
 order-$3$ Casoratian, via Corollary~\ref{cor:indep}, furnishes an Ap\'ery-style
 irrationality certificate. This is the genuinely open next entry; the present note ---
@@ -377,9 +380,14 @@ derives its first-order (Abel) law, but only for that concrete instance --- inde
 source remarks that the order-$1$ recurrence ``should be obtained from something more
 general.'' Having searched Mathlib, the Isabelle AFP, and the Coq/MathComp ecosystem by
 name (\emph{Casoratian}, \emph{Wronskian}) and by structure, we find no
-\emph{general-order, uniform-in-$k$} Casoratian Abel formula with time-varying
-coefficients --- precisely the ``something more general'' the Ap\'ery formalization
-lacked --- which is what the present note provides and machine-checks.
+\emph{machine-checked} general-order, uniform-in-$k$ Casoratian Abel formula with
+time-varying coefficients in any of these systems --- precisely the ``something more
+general'' the Ap\'ery formalization lacked. The \emph{identity} itself is of course
+classical and not in question: the general-order law with time-varying coefficients is
+textbook (\cite[Ch.~2]{elaydi},\cite{kelleypeterson},\cite{milnethomson}), for which we
+claim no novelty. Our claim is strictly one of \emph{formalization coverage} --- the
+machine-checked theorem, uniform in $k$ and with time-varying $c_j(n)$, that the present
+note contributes and gate-checks.
 
 \paragraph{Within this corpus, and a note on hosting.}
 The deposited corpus had formalized the Casoratian only in its order-$2$ form --- the
@@ -408,7 +416,10 @@ The Lean sources are \texttt{verify/GeneralCaso.lean} (namespace
 \texttt{PcfHigherCaso}); they are built and axiom-cone-checked inside the
 \texttt{pcf-delta} \texttt{PcfContinuant} project~\cite{pcfdelta} via
 \texttt{lake env lean Check.lean} (toolchain \texttt{leanprover/lean4:v4.30.0},
-Mathlib \texttt{rev=v4.30.0}). The independent symbolic gate is
+Mathlib \texttt{rev=v4.30.0}); the verbatim \texttt{\#print axioms} output for the nine
+declarations is mirrored in this repository as \texttt{verify/AXIOM\_CONES.txt}, so the
+cone partition of Section~\ref{sec:lean} is reproducible here without rebuilding the host
+project. The independent symbolic gate is
 \texttt{harness\_caso\_k.py} (\texttt{sympy}~\cite{sympy}; run
 \texttt{python harness\_caso\_k.py}), which prints the $k=3$ symbolic proof, the
 exact-rational $k=2,\dots,7$ verification, and the named instances. Public repository:

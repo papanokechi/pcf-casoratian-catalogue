@@ -1,0 +1,50 @@
+AXIOM CONES — catalogue entry C1 (higher-order / uniform-in-k Casoratian Abel law)
+===================================================================================
+
+This file mirrors the genuine `#print axioms` output for the nine machine-checked
+declarations of this catalogue entry, so the PROVEN axiom-cone claim of the manuscript
+(higher_casoratian.tex, Section 5, Theorem "Formalized core") is self-contained in this
+repository and not only asserted in the companion host project.
+
+PROVENANCE (not asserted from memory — captured from a live run):
+  command : lake env lean Check.lean
+  project : pcf-delta / lean/pcf_continuant  (PcfContinuant), which hosts and gates the
+            Lean core; verify/GeneralCaso.lean and verify/HigherCaso.lean in THIS repo are
+            byte-faithful mirrors of PcfContinuant/GeneralCaso.lean and
+            PcfContinuant/HigherCaso.lean.
+  toolchain: leanprover/lean4 v4.30.0, Mathlib rev=v4.30.0 (pinned via lake-manifest.json)
+  result  : process exit code 0; no `sorryAx` in any cone below; sources contain no
+            sorry / admit / native_decide.
+  date    : 2026-06-12
+
+THE NINE DECLARATIONS (verbatim `#print axioms` lines)
+------------------------------------------------------
+Uniform-in-k core (namespace PcfGeneralCaso, GeneralCaso.lean):
+  'PcfGeneralCaso.casoMat_det_step' depends on axioms: [propext, Classical.choice, Quot.sound]
+  'PcfGeneralCaso.casoMat_det_eq' depends on axioms: [propext, Classical.choice, Quot.sound]
+  'PcfGeneralCaso.casoMat_det_eq_const' depends on axioms: [propext, Classical.choice, Quot.sound]
+  'PcfGeneralCaso.casoMat_det_ne_zero_of_init' depends on axioms: [propext, Classical.choice, Quot.sound]
+
+By-hand low-order witnesses (namespace PcfHigherCaso, HigherCaso.lean):
+  'PcfHigherCaso.caso2_step' depends on axioms: [propext, Quot.sound]
+  'PcfHigherCaso.caso3_step' depends on axioms: [propext, Quot.sound]
+  'PcfHigherCaso.caso3_eq' depends on axioms: [propext, Classical.choice, Quot.sound]
+  'PcfHigherCaso.caso3_eq_const' depends on axioms: [propext, Classical.choice, Quot.sound]
+  'PcfHigherCaso.caso3_ne_zero_of_init' depends on axioms: [propext, Classical.choice, Quot.sound]
+
+PARTITION (matches Section 5 of the manuscript exactly)
+-------------------------------------------------------
+  * All nine cones are subsets of {propext, Classical.choice, Quot.sound}.
+  * Exactly TWO close with the minimal cone {propext, Quot.sound}: the by-hand step
+    witnesses caso2_step and caso3_step (their proofs use no `classical` tactic and avoid
+    Mathlib's general determinant machinery, closing by direct cofactor `ring`).
+  * The remaining SEVEN additionally use Classical.choice; this is inherited from Mathlib's
+    general `Matrix.det` / permutation infrastructure (it enters even casoMat_det_step via
+    the `classical` tactic and the determinant sum), not from any analytic input. The
+    statements are pure finitary algebra over a CommRing (the two `_ne_zero_of_init`
+    certificates additionally assume `IsDomain R`).
+
+NOTE. Check.lean runs `#print axioms` over the whole pcf-delta corpus (70+ declarations);
+the nine lines above are the entry-C1 subset, reproduced verbatim from that run. The full
+gate output additionally confirms every other corpus declaration also closes within
+{propext, Classical.choice, Quot.sound} with no sorryAx.
