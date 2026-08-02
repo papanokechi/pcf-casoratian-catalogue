@@ -131,6 +131,26 @@ git -C $nodoi commit -q -m "no concept doi" *> $null
 git -C $nodoi tag -f "v$UNMINTED" *> $null
 git -C $nodoi push -q origin main *> $null
 
+# The published pcf-delta v1.4 archive (10.5281/zenodo.20633165, md5 fc172e44...)
+# carries its claim SPLIT ACROSS A LINE BREAK, with the YAML comment marker of the
+# continuation line sitting between the two words, and its CITATION.cff carries a
+# third casing, "NOT YET deposited". The literal list scores zero on both forms.   SELFNEG-OK
+# This fixture is that text; the only edit is the version number. A fixture the
+# subject's author invented would share the author's blind spot, which is the
+# whole reason the previous list missed a real deposit for two months.
+$prefail = 0
+$splitclaim = New-Fixture "splitclaim" $UNMINTED $UNMINTED
+Add-Content "$splitclaim\METADATA.yml" @(
+    'zenodo:'
+    ('  # v' + $UNMINTED + ' (current LIVE draft; sigma_3 promoted) is NOT YET')   # SELFNEG-OK
+    '  # DEPOSITED - its version DOI is minted by hand at deposit time.'           # SELFNEG-OK
+    '  date_released: "2026-06-10"  # DRAFT prepared for sharing; NOT YET deposited.'  # SELFNEG-OK
+) -Encoding utf8
+git -C $splitclaim add -A *> $null
+git -C $splitclaim commit -q -m "self-negating claim split across lines" *> $null
+git -C $splitclaim tag -f "v$UNMINTED" *> $null
+git -C $splitclaim push -q origin main *> $null
+
 Write-Host ""
 Write-Host "--- fixture assertion (direct observation, not the subject's report) ---"
 foreach ($n in @("ready", "dirty", "unpushed", "conflict", "published", "untagged")) {
@@ -147,6 +167,24 @@ foreach ($n in @("ready", "dirty", "unpushed", "conflict", "published", "untagge
         $n, $zv, $cv, $d, $h, $r, $tg, $(if ($h -eq $r) { "in-sync" } else { "DIVERGED" })
 }
 "  {0,-10} no .git present" -f "norepo"
+
+# Direct observation that this fixture exercises the SPLIT pass and not the literal
+# one. Without it, a fixture that happened to carry a contiguous phrase would exit 7
+# for the old reason and report the new pass as working - the same shape as the
+# inversion regex that matched nothing and was read as proof a harness could not fail.
+$litPhrases = @('NOT YET MINTED', 'NOT YET DEPOSITED', 'not yet minted',            # SELFNEG-OK
+                'not yet deposited', 'awaiting operator', 'will only exist after',  # SELFNEG-OK
+                'not been deposited', 'to be minted', 'NOT YET PUBLISHED',          # SELFNEG-OK
+                'not yet published')                                                # SELFNEG-OK
+$sm = @(Get-Content "$splitclaim\METADATA.yml")
+$litHits = 0
+foreach ($ln in $sm) { foreach ($ph in $litPhrases) { if ($ln.Contains($ph)) { $litHits++ } } }
+$hasSplit = (($sm -join "`n") -match '(?i)NOT\s+YET\s*\r?\n\s*#\s*DEPOSITED')       # SELFNEG-OK
+"  {0,-10} literal-list hits={1} (must be 0)  claim split across lines={2} (must be True)" -f "splitclaim", $litHits, $hasSplit
+if ($litHits -ne 0 -or -not $hasSplit) {
+    Write-Host "  FIXTURE FAULT: splitclaim does not exercise the split-claim pass; a pass here would mean nothing"
+    $prefail++
+}
 Write-Host "  fixtures differ in exactly one axis each: version-vs-live, dirtiness, push state, metadata agreement, tagging."
 Write-Host "  (a uniform verdict across these would indict this harness, not the subject)"
 
@@ -162,11 +200,13 @@ $cases = @(
     @{ n = "metadata versions disagree";           p = $conflict;  api = $null; want = 5 }
     @{ n = "HEAD carries no version tag";          p = $untagged;  api = $null; want = 6 }
     @{ n = "metadata says it is not yet minted";   p = $selfneg;   api = $null; want = 7 }   # SELFNEG-OK
+    @{ n = "claim split across lines by a comment"; p = $splitclaim; api = $null; want = 7
+       must = @("across a line break or comment marker") }
     @{ n = "no concept DOI: local checks still run"; p = $nodoi;   api = $null; want = 3
        must = @("SELF-NEGATING", "the already-published check cannot run") }
 )
 
-$failures = 0
+$failures = $prefail
 $seen = @()
 foreach ($c in $cases) {
     $args = @("-NoProfile", "-File", $Subject, "-RepoPath", $c.p, "-TimeoutSec", "8")

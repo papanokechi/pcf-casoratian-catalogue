@@ -43,7 +43,7 @@
     6  NO VERSION TAG    - HEAD carries no tag matching the declared version, so the
                            uploaded archive would name no point in history
     7  SELF-NEGATING     - the metadata about to be deposited asserts that it has not
-                           been deposited. Both prior deposits shipped this: v1.0's
+                           been deposited. Both prior deposits shipped this: v1.0's  SELFNEG-OK
                            archive says "NOT YET DEPOSITED", v1.1's says "NOT YET    SELFNEG-OK
                            MINTED". Neither can be corrected. The text is written
                            before the mint and the mint falsifies it, so pre-mint
@@ -217,13 +217,45 @@ $selfNegating = @(
     'to be minted', 'NOT YET PUBLISHED', 'not yet published'                        # SELFNEG-OK
 )
 $exemptMarker = 'SELFNEG-OK'
+
+# The literal list above matches a contiguous run of characters on ONE line,
+# because that is the form BOTH instances it was written from happened to take.
+# Broadening the file axis (.zenodo.json -> every tracked file) fixed the
+# coordinate that was noticed and left this one exactly as it was.
+#
+# The real published pcf-delta v1.4 archive defeats it twice over:
+#
+#     # v1.4 (current LIVE draft; ...) is NOT YET                                SELFNEG-OK
+#     # DEPOSITED - its version DOI is minted by hand at deposit time            SELFNEG-OK
+#
+# The claim is split across a line break, AND the YAML comment marker of the
+# continuation line sits between the two words - so it survives a line-by-line
+# scan and it survives whole-file whitespace flattening too. Measured against
+# the deposited artifact (md5 fc172e44...): both approaches score zero hits.
+#
+# So this pass is aimed at the SHAPE - a negation followed closely by a deposit
+# verb - over text flattened with comment/continuation punctuation removed,
+# carrying a per-character map back to source lines so exemption and reporting
+# stay line-accurate.
+#
+# Bare "to be" is deliberately NOT a negation token here, though "to be minted"  SELFNEG-OK
+# stays in the literal list above. Generalised, it matches ordinary neutral
+# prose - "the metadata about to be deposited", "to be published in a journal" -
+# and a gate that cries wolf on its own documentation teaches operators to add
+# exemption markers reflexively, which is how a visible control turns into
+# noise. The narrower tokens below carry the claim; "to be" only carries tense.
+$snShapeRx = [regex]'(?i)\b(?:not\s+yet|not\s+been|never\s+been|yet\s+to\s+be|will\s+(?:only\s+)?(?:be|exist))[\s\p{P}]{0,8}(?:minted|deposited|published|archived|released)\b'   # SELFNEG-OK
+# Read as text, so a large binary blob would be mapped character by character.
+# Skipped files are COUNTED AND PRINTED: a file that was not scanned must never
+# be indistinguishable, in the output, from a file that was scanned and clean.
+$snMaxBytes = 2MB
 $tracked = @(git -C $repo ls-files 2>$null | Where-Object { $_ })
 if ($tracked.Count -eq 0) {
     # Not "no phrases found" - no text was searched at all. A check that could not
     # run must never be reported, or defaulted, as a check that passed.
     Add-Finding 3 "CANNOT RUN" "no tracked files listed, so the self-negating-metadata check searched nothing"
 } else {
-    $snScanned = 0; $snEmpty = 0; $snExempt = 0; $snExemptFiles = @()
+    $snScanned = 0; $snEmpty = 0; $snExempt = 0; $snExemptFiles = @(); $snSkipped = @()
     foreach ($rel in $tracked) {
         $full = Join-Path $repo $rel
         if (-not (Test-Path $full)) { $snEmpty++; continue }
@@ -244,13 +276,43 @@ if ($tracked.Count -eq 0) {
                 Add-Finding 7 "SELF-NEGATING" "${rel}:$($i+1) contains ""$phrase"" - the deposited archive would permanently assert it was never made: $ctx"
             }
         }
+
+        # --- same claim, split across lines or broken by a comment marker ------- SELFNEG-OK
+        if ((Get-Item $full).Length -gt $snMaxBytes) { $snSkipped += $rel; continue }
+        $flat = New-Object System.Text.StringBuilder
+        $flatLine = New-Object 'System.Collections.Generic.List[int]'
+        for ($i = 0; $i -lt $lines.Count; $i++) {
+            # Strip leading comment/quote punctuation, then collapse whitespace, so
+            # "... is NOT YET" / "# DEPOSITED - ..." reads as one span of prose.  SELFNEG-OK
+            $t = ($lines[$i] -replace '^[\s>]*(?:#|//|%|\*|--|;)+', ' ') -replace '\s+', ' '
+            foreach ($ch in $t.ToCharArray()) { [void]$flat.Append($ch); $flatLine.Add($i) }
+            [void]$flat.Append(' '); $flatLine.Add($i)
+        }
+        foreach ($mm in $snShapeRx.Matches($flat.ToString())) {
+            $lo = $flatLine[$mm.Index]
+            $hi = $flatLine[[Math]::Min($mm.Index + $mm.Length - 1, $flatLine.Count - 1)]
+            # Exempt if ANY source line the match spans carries the marker: a match
+            # that begins in exempted prose and runs on must not be reported twice.
+            $span = $lo..$hi | ForEach-Object { $lines[$_] }
+            if (@($span | Where-Object { $_.Contains($exemptMarker) }).Count -gt 0) {
+                $snExempt++
+                if ($snExemptFiles -notcontains $rel) { $snExemptFiles += $rel }
+                continue
+            }
+            # Only report what the line-by-line pass could not already see, so one
+            # defect is one finding.
+            if ($lo -eq $hi -and @($selfNegating | Where-Object { $lines[$lo].Contains($_) }).Count -gt 0) { continue }
+            $ctx = ($mm.Value -replace '\s+', ' ').Trim()
+            $where = if ($lo -eq $hi) { "$($lo+1)" } else { "$($lo+1)-$($hi+1)" }
+            Add-Finding 7 "SELF-NEGATING" "${rel}:$where asserts ""$ctx"" across a line break or comment marker - the deposited archive would permanently assert it was never made"
+        }
     }
     if ($snScanned -eq 0) {
         Add-Finding 3 "CANNOT RUN" "no tracked file yielded any text, so the self-negating-metadata check searched nothing"
     } else {
         # Both numbers, always: "17 scanned" against 18 tracked is a gap a reader
         # would otherwise have to go and investigate to rule out.
-        Write-Host "selfneg : $snScanned of $($tracked.Count) tracked file(s) scanned ($snEmpty empty/unreadable), $snExempt line(s) exempt via $exemptMarker$(if ($snExemptFiles) { " in $($snExemptFiles -join ', ')" })"
+        Write-Host "selfneg : $snScanned of $($tracked.Count) tracked file(s) scanned ($snEmpty empty/unreadable), $snExempt line(s) exempt via $exemptMarker$(if ($snExemptFiles) { " in $($snExemptFiles -join ', ')" })$(if ($snSkipped) { "; $($snSkipped.Count) file(s) over $($snMaxBytes/1MB)MB had the line scan but NOT the split-claim scan: $($snSkipped -join ', ')" })"
     }
 }
 
