@@ -186,11 +186,13 @@ target recurrence whose shrinking remainder yields a *new* irrationality theorem
     tools/
       check_mint_ready.ps1       deposit gate. Exits 0 ready / 1 dirty tree / 2 not on
                                  server / 3 CANNOT RUN / 4 already published / 5 version
-                                 conflict / 6 no version tag / 7 metadata asserts it has
-                                 not been deposited. Asks Zenodo and asks the server;
-                                 never trusts a local remote-tracking ref.
-      test_check_mint_ready.ps1  harness: 9 fixtures -> 8 exit codes. Exits nonzero on
-                                 any mismatch.
+                                 conflict / 6 no version tag / 7 self-negating metadata
+                                 (a tense-bound deposit-status claim, which the mint
+                                 itself would falsify and freeze). Asks Zenodo and asks
+                                 the server; never trusts a local remote-tracking ref.
+      test_check_mint_ready.ps1  harness: 10 fixtures -> 8 exit codes, and asserts on
+                                 output where severity hides a finding behind a
+                                 higher-ranked one. Exits nonzero on any mismatch.
       check_mirror.ps1           verifies the three Lean files are byte-faithful mirrors
                                  of the pcf-delta host sources, by git blob SHA, and
                                  prints the ref each side was read at.

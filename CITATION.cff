@@ -109,7 +109,8 @@ references:
 # repo https://github.com/papanokechi/pcf-casoratian-catalogue. Future revisions deposit
 # via Zenodo "New version" under the concept DOI; operator-gated -- do NOT cut a new
 # version without operator sign-off.
-# VERSION 1.1 (DRAFT -- NOT YET MINTED, prepared 2026-06-13): promotes the Section-7
+# VERSION 1.1 (deposited 2026-08-02, version DOI 10.5281/zenodo.21753829, from git tag
+# v1.1): promotes the Section-7
 # fundamental-system converse (STRUCTURAL -> PROVEN: sol_unique_of_init,
 # solution_isLinearCombo) and adds a now-PROVEN Hermite-Pade/Apery irrationality pipeline
 # (namespace PcfHermitePade, source HermitePade.lean) re-deriving Irrational phi via the

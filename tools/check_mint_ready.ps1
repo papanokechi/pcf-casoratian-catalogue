@@ -44,7 +44,7 @@
                            uploaded archive would name no point in history
     7  SELF-NEGATING     - the metadata about to be deposited asserts that it has not
                            been deposited. Both prior deposits shipped this: v1.0's
-                           archive says "NOT YET DEPOSITED", v1.1's says "NOT YET
+                           archive says "NOT YET DEPOSITED", v1.1's says "NOT YET    SELFNEG-OK
                            MINTED". Neither can be corrected. The text is written
                            before the mint and the mint falsifies it, so pre-mint
                            metadata must be tense-neutral - describe what the version
@@ -101,21 +101,28 @@ if (Test-Path $cPath) {
     if ($d -match '^doi:\s*"?(10\.\d+/zenodo\.(\d+))"?\s*$') { $cDoi = $Matches[2] }
 }
 
+$canVersion = $true
 if (-not $zVer -and -not $cVer) {
-    Write-Host "  [CANNOT RUN] no version declared in .zenodo.json or CITATION.cff"
-    exit 3
+    # Not a reason to abort. Retrodicting this gate against tag v0.1.3 showed the
+    # concept-DOI abort below suppressing the self-negating scan - a purely local
+    # check, needing no network and no version, silenced by a missing Zenodo
+    # prerequisite. A missing input for ONE check disables THAT check; only a
+    # condition that makes the whole gate meaningless (no repo, no path) aborts.
+    Add-Finding 3 "CANNOT RUN" "no version declared in .zenodo.json or CITATION.cff - the published-version and tag checks cannot run"
+    $canVersion = $false
 }
 if ($zVer -and $cVer -and $zVer -ne $cVer) {
     Add-Finding 5 "VERSION CONFLICT" ".zenodo.json says '$zVer', CITATION.cff says '$cVer' - the deposit has no single identity"
 }
 $ver = if ($zVer) { $zVer } else { $cVer }
 if (-not $ConceptId) { $ConceptId = $cDoi }
+$canAskZenodo = $canVersion
 if (-not $ConceptId) {
-    Write-Host "  [CANNOT RUN] no concept DOI found (CITATION.cff top-level 'doi:') and none supplied via -ConceptId"
-    exit 3
+    Add-Finding 3 "CANNOT RUN" "no concept DOI found (CITATION.cff top-level 'doi:') and none supplied via -ConceptId - the already-published check cannot run"
+    $canAskZenodo = $false
 }
-Write-Host "version : $ver  (zenodo.json='$zVer' citation.cff='$cVer')"
-Write-Host "concept : 10.5281/zenodo.$ConceptId"
+Write-Host "version : $(if ($ver) { $ver } else { '(none declared)' })  (zenodo.json='$zVer' citation.cff='$cVer')"
+Write-Host "concept : $(if ($ConceptId) { "10.5281/zenodo.$ConceptId" } else { '(none)' })"
 
 # --- 1. nothing uncommitted ---------------------------------------------------
 $dirty = @(git -C $repo status --porcelain 2>$null | Where-Object { $_ })
@@ -146,19 +153,23 @@ if (-not $branch -or $branch -eq "HEAD") {
 
 # --- 3. and Zenodo has not already published this version ---------------------
 $latest = $null; $latestDoi = $null; $latestDate = $null
-try {
-    $rec = Invoke-RestMethod "$ZenodoApi/$ConceptId" -TimeoutSec $TimeoutSec
-    $latest = $rec.metadata.version; $latestDoi = $rec.doi; $latestDate = $rec.metadata.publication_date
-} catch { $latest = $null }
-
-if ($null -eq $latest) {
-    Add-Finding 3 "CANNOT RUN" "Zenodo unreachable - this gate does not know whether v$ver is already published, and will not guess"
+if (-not $canAskZenodo) {
+    Write-Host "live    : (not asked - no concept DOI and/or no declared version)"
 } else {
-    Write-Host "live    : v$latest  $latestDoi  ($latestDate)"
-    $already = $false
-    try { $already = ([version]$ver -le [version]$latest) } catch { $already = ($ver -eq $latest) }
-    if ($already) {
-        Add-Finding 4 "ALREADY PUBLISHED" "live latest is v$latest ($latestDoi, $latestDate); a second v$ver would be permanent and unwithdrawable"
+    try {
+        $rec = Invoke-RestMethod "$ZenodoApi/$ConceptId" -TimeoutSec $TimeoutSec
+        $latest = $rec.metadata.version; $latestDoi = $rec.doi; $latestDate = $rec.metadata.publication_date
+    } catch { $latest = $null }
+
+    if ($null -eq $latest) {
+        Add-Finding 3 "CANNOT RUN" "Zenodo unreachable - this gate does not know whether v$ver is already published, and will not guess"
+    } else {
+        Write-Host "live    : v$latest  $latestDoi  ($latestDate)"
+        $already = $false
+        try { $already = ([version]$ver -le [version]$latest) } catch { $already = ($ver -eq $latest) }
+        if ($already) {
+            Add-Finding 4 "ALREADY PUBLISHED" "live latest is v$latest ($latestDoi, $latestDate); a second v$ver would be permanent and unwithdrawable"
+        }
     }
 }
 
@@ -167,6 +178,9 @@ if ($null -eq $latest) {
 # shipped is that tag's archive. That provenance is a claim the record makes and
 # nothing established. A deposit built from an untagged commit attaches bytes to
 # a permanent DOI with no named point in history to rebuild them from.
+if (-not $canVersion) {
+    Write-Host "tag     : (not checked - no declared version to match a tag against)"
+} else {
 $tagsAtHead = @(git -C $repo tag --points-at HEAD 2>$null | Where-Object { $_ })
 $verTag = $tagsAtHead | Where-Object { ($_ -replace '^v', '') -eq $ver }
 if ($tagsAtHead.Count -eq 0) {
@@ -179,46 +193,71 @@ if ($tagsAtHead.Count -eq 0) {
 } else {
     Write-Host "tag     : $verTag at HEAD (the archive the upload should carry)"
 }
+}
 
-# --- 5. and the metadata does not assert that it has not been deposited -------
+# --- 5. and the metadata does not assert that it has not been deposited ------- SELFNEG-OK
 # Both prior deposits shipped a permanent, uncorrectable claim that they did not
-# exist: v1.0's archive says "NOT YET DEPOSITED", v1.1's says "NOT YET MINTED".
+# exist: v1.0's archive says "NOT YET DEPOSITED", v1.1's says "NOT YET MINTED". SELFNEG-OK
 # The text is authored before the mint and the mint is what falsifies it, so
-# there is no ordering that saves a tense-bound status label. Checked in the two
-# fields that leave this repository: 'description' is uploaded and becomes the
-# record's own prose, 'notes' ships inside the source archive.
+# there is no ordering that saves a tense-bound status label.
+#
+# Scanned across EVERY tracked file, not just .zenodo.json. The first version of
+# this check read .zenodo.json alone - aimed at the file where the defect was
+# found rather than at its shape - and the deposited v1.1 archive turned out to
+# carry the same claim in CITATION.cff and README.md too. That is the exact
+# error this check exists to catch, committed inside the check for it.
+#
+# The scanner must contain the phrases it searches for, so exemption is by an
+# explicit per-line marker, and EVERY exemption is printed. A silent exclusion
+# list would be a hole nobody could see; a visible one is a decision a reader
+# can audit. Exempt lines are counted and reported even when the gate passes.
 $selfNegating = @(
-    'NOT YET MINTED', 'NOT YET DEPOSITED', 'not yet minted', 'not yet deposited',
-    'awaiting operator', 'will only exist after'
+    'NOT YET MINTED', 'NOT YET DEPOSITED', 'not yet minted', 'not yet deposited',   # SELFNEG-OK
+    'awaiting operator', 'will only exist after', 'not been deposited',             # SELFNEG-OK
+    'to be minted', 'NOT YET PUBLISHED', 'not yet published'                        # SELFNEG-OK
 )
-if ($null -eq $zMeta) {
+$exemptMarker = 'SELFNEG-OK'
+$tracked = @(git -C $repo ls-files 2>$null | Where-Object { $_ })
+if ($tracked.Count -eq 0) {
     # Not "no phrases found" - no text was searched at all. A check that could not
     # run must never be reported, or defaulted, as a check that passed.
-    Add-Finding 3 "CANNOT RUN" ".zenodo.json did not parse, so the self-negating-metadata check searched nothing"
+    Add-Finding 3 "CANNOT RUN" "no tracked files listed, so the self-negating-metadata check searched nothing"
 } else {
-    $scanned = 0
-    foreach ($field in 'description', 'notes') {
-        $text = $zMeta.$field
-        if (-not $text) { continue }
-        $scanned++
-        foreach ($phrase in $selfNegating) {
-            $at = $text.IndexOf($phrase, [StringComparison]::Ordinal)
-            if ($at -lt 0) { continue }
-            $from = [Math]::Max(0, $at - 45)
-            $len  = [Math]::Min($text.Length - $from, $phrase.Length + 90)
-            $ctx  = ($text.Substring($from, $len) -replace '\s+', ' ').Trim()
-            Add-Finding 7 "SELF-NEGATING" "'$field' contains ""$phrase"" - the deposit would permanently assert it was never made: ...$ctx..."
+    $snScanned = 0; $snEmpty = 0; $snExempt = 0; $snExemptFiles = @()
+    foreach ($rel in $tracked) {
+        $full = Join-Path $repo $rel
+        if (-not (Test-Path $full)) { $snEmpty++; continue }
+        $lines = @(Get-Content $full -ErrorAction SilentlyContinue)
+        if ($lines.Count -eq 0) { $snEmpty++; continue }
+        $snScanned++
+        for ($i = 0; $i -lt $lines.Count; $i++) {
+            $line = $lines[$i]
+            foreach ($phrase in $selfNegating) {
+                if (-not $line.Contains($phrase)) { continue }
+                if ($line.Contains($exemptMarker)) {
+                    $snExempt++
+                    if ($snExemptFiles -notcontains $rel) { $snExemptFiles += $rel }
+                    continue
+                }
+                $ctx = ($line -replace '\s+', ' ').Trim()
+                if ($ctx.Length -gt 130) { $ctx = $ctx.Substring(0, 130) + "..." }
+                Add-Finding 7 "SELF-NEGATING" "${rel}:$($i+1) contains ""$phrase"" - the deposited archive would permanently assert it was never made: $ctx"
+            }
         }
     }
-    if ($scanned -eq 0) {
-        Add-Finding 3 "CANNOT RUN" ".zenodo.json has neither 'description' nor 'notes', so the self-negating-metadata check searched nothing"
+    if ($snScanned -eq 0) {
+        Add-Finding 3 "CANNOT RUN" "no tracked file yielded any text, so the self-negating-metadata check searched nothing"
+    } else {
+        # Both numbers, always: "17 scanned" against 18 tracked is a gap a reader
+        # would otherwise have to go and investigate to rule out.
+        Write-Host "selfneg : $snScanned of $($tracked.Count) tracked file(s) scanned ($snEmpty empty/unreadable), $snExempt line(s) exempt via $exemptMarker$(if ($snExemptFiles) { " in $($snExemptFiles -join ', ')" })"
     }
 }
 
 # --- verdict ------------------------------------------------------------------
 Write-Host ""
 if ($findings.Count -eq 0) {
-    Write-Host "MINT GATE: READY. v$ver is not yet published under concept 10.5281/zenodo.$ConceptId,"
+    Write-Host "MINT GATE: READY. v$ver is not yet published under concept 10.5281/zenodo.$ConceptId,"   # SELFNEG-OK
     Write-Host "  the tree is clean, HEAD is the commit the server holds for '$branch',"
     Write-Host "  and HEAD carries the tag '$verTag' the upload is named for."
     Write-Host "  This gate does not mint anything. The Publish action is the operator's."

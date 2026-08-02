@@ -104,7 +104,7 @@ $untagged  = New-Fixture "untagged"  $UNMINTED $UNMINTED
 # The description is v1.1's real shipped wording. This fixture is a regression
 # test against an actual uncorrectable defect, not an invented one: both prior
 # deposits permanently assert they were never made.
-$selfneg   = New-Fixture "selfneg"   $UNMINTED $UNMINTED "VERSION 99.99 (DRAFT -- NOT YET MINTED, awaiting operator git-commit + Zenodo 'New version')"
+$selfneg   = New-Fixture "selfneg"   $UNMINTED $UNMINTED "VERSION 99.99 (DRAFT -- NOT YET MINTED, awaiting operator git-commit + Zenodo 'New version')"  # SELFNEG-OK
 git -C $untagged tag -d "v$UNMINTED" *> $null
 Set-Content "$dirty\stray.txt" "uncommitted" -Encoding utf8
 Set-Content "$unpushed\extra.txt" "committed but not pushed" -Encoding utf8
@@ -116,6 +116,20 @@ git -C $conflict commit -q -m "conflicting versions" *> $null
 git -C $conflict tag -f "v$UNMINTED" *> $null
 git -C $conflict push -q origin main *> $null
 $norepo = "$root\norepo"; New-Item -ItemType Directory -Force $norepo | Out-Null
+
+# Self-negating text AND no concept DOI. Retrodicting the gate against tag
+# v0.1.3 - which has no top-level 'doi:' because the concept DOI did not exist
+# yet - showed it aborting on the missing DOI and never reaching the local
+# scan. So the one defect it could have caught with no network at all was the
+# one it stayed silent about. Severity puts CANNOT RUN above SELF-NEGATING, so
+# the exit code cannot express this: the finding must be asserted in output.
+$nodoi = New-Fixture "nodoi" $UNMINTED $UNMINTED "VERSION 99.99 -- NOT YET MINTED, awaiting operator sign-off"  # SELFNEG-OK
+$cffNoDoi = @(Get-Content "$nodoi\CITATION.cff") | Where-Object { $_ -notmatch '^doi:' }
+Set-Content "$nodoi\CITATION.cff" $cffNoDoi -Encoding utf8
+git -C $nodoi add -A *> $null
+git -C $nodoi commit -q -m "no concept doi" *> $null
+git -C $nodoi tag -f "v$UNMINTED" *> $null
+git -C $nodoi push -q origin main *> $null
 
 Write-Host ""
 Write-Host "--- fixture assertion (direct observation, not the subject's report) ---"
@@ -147,7 +161,9 @@ $cases = @(
     @{ n = "v1.0 is already published";            p = $published; api = $null; want = 4 }
     @{ n = "metadata versions disagree";           p = $conflict;  api = $null; want = 5 }
     @{ n = "HEAD carries no version tag";          p = $untagged;  api = $null; want = 6 }
-    @{ n = "metadata says it is not yet minted";   p = $selfneg;   api = $null; want = 7 }
+    @{ n = "metadata says it is not yet minted";   p = $selfneg;   api = $null; want = 7 }   # SELFNEG-OK
+    @{ n = "no concept DOI: local checks still run"; p = $nodoi;   api = $null; want = 3
+       must = @("SELF-NEGATING", "the already-published check cannot run") }
 )
 
 $failures = 0
@@ -155,12 +171,27 @@ $seen = @()
 foreach ($c in $cases) {
     $args = @("-NoProfile", "-File", $Subject, "-RepoPath", $c.p, "-TimeoutSec", "8")
     if ($c.api) { $args += @("-ZenodoApi", $c.api) }
-    & pwsh @args *> $null
+    $out = (& pwsh @args 2>&1 | Out-String)
     $got = $LASTEXITCODE
     $seen += $got
     $ok = ($got -eq $c.want)
+    # Exit code alone cannot express "this check still ran even though a
+    # different one could not". The severity order means a CANNOT RUN masks a
+    # lower-ranked finding in the code, so the finding has to be asserted in the
+    # output or the regression is invisible.
+    $noteMsg = ""
+    if ($c.must) {
+        foreach ($m in @($c.must)) {
+            if ($out -notmatch [regex]::Escape($m)) { $ok = $false; $noteMsg = " [missing: $m]" }
+        }
+    }
+    if ($c.mustNot) {
+        foreach ($m in @($c.mustNot)) {
+            if ($out -match [regex]::Escape($m)) { $ok = $false; $noteMsg = " [unexpected: $m]" }
+        }
+    }
     if (-not $ok) { $failures++ }
-    "  {0,-38} expect {1}  got {2}  {3}" -f $c.n, $c.want, $got, $(if ($ok) { "OK" } else { "FAIL" })
+    "  {0,-38} expect {1}  got {2}  {3}{4}" -f $c.n, $c.want, $got, $(if ($ok) { "OK" } else { "FAIL" }), $noteMsg
 }
 
 Write-Host ""
