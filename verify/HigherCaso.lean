@@ -6,6 +6,7 @@ Authors: papanokechi
 import Mathlib.Algebra.BigOperators.Group.Finset.Basic
 import Mathlib.Algebra.BigOperators.GroupWithZero.Finset
 import Mathlib.Tactic.Ring
+import PcfContinuant.GeneralCaso
 
 /-!
 # Higher-order Casoratians for polynomial continued fractions (Abel–Jacobi–Liouville law)
@@ -88,6 +89,23 @@ theorem caso3_step {c0 c1 c2 y z w : ℕ → R}
     caso3 y z w (n + 1) = c0 n * caso3 y z w n := by
   simp only [caso3, show n + 1 + 1 = n + 2 from rfl, show n + 1 + 2 = n + 3 from rfl,
     hy n, hz n, hw n]
+  ring
+
+/-- **Bridge to the general law.**  The by-hand order-3 Casoratian `caso3 y z w` is
+*definitionally* the determinant of the general `(k+1)×(k+1)` Casoratian matrix
+`PcfGeneralCaso.casoMat` specialized to `k = 2` (order 3), with the three solutions
+assembled as the family `![y, z, w] : Fin 3 → ℕ → R`.  This certifies that the bespoke
+cofactor expansion `caso3` — used for the minimal-cone faithfulness witnesses
+`caso3_step`, `caso3_eq`, … — coincides with the genuine `Matrix.det` of the general
+theorem, so those witnesses guard the *formalized* general law and not merely its prose
+statement.  The identity holds for arbitrary sequences (no recurrence hypothesis). -/
+theorem caso3_matches_general (y z w : ℕ → R) (n : ℕ) :
+    caso3 y z w n = (PcfGeneralCaso.casoMat (k := 2) ![y, z, w] n).det := by
+  simp only [PcfGeneralCaso.casoMat]
+  rw [Matrix.det_fin_three]
+  simp only [caso3, Matrix.of_apply, Matrix.cons_val_zero, Matrix.cons_val_one,
+    Matrix.head_cons, Matrix.cons_val_two, Matrix.tail_cons, Fin.isValue,
+    Fin.val_zero, Fin.val_one, Fin.val_two, Nat.add_zero]
   ring
 
 /-- **Order-3 Casoratian closed product form.**  Hence the Casoratian equals

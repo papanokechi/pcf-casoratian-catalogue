@@ -6,23 +6,25 @@
 \usepackage{microtype}
 
 \newtheorem{theorem}{Theorem}
-\newtheorem{proposition}{Proposition}
-\newtheorem{corollary}{Corollary}
-\newtheorem{lemma}{Lemma}
-\newtheorem{definition}{Definition}
-\newtheorem{remark}{Remark}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{remark}[theorem]{Remark}
 
 \newcommand{\Z}{\mathbb{Z}}
 \newcommand{\R}{\mathbb{R}}
 \newcommand{\N}{\mathbb{N}}
 \newcommand{\Caso}{C}
+\newcommand{\CasoM}{W}
 \DeclareMathOperator{\sgn}{sgn}
 
-\title{A machine-checked, uniform-in-order Abel formula\\
-for the Casoratian, in Lean~4/Mathlib}
+\title{A machine-checked, uniform-in-order Abel formula for the Casoratian,\\
+with a formalized fundamental-system converse and an irrationality certificate,\\
+in Lean~4/Mathlib}
 \author{Papanokechi\\
 \small ORCID: \href{https://orcid.org/0009-0000-6192-8273}{0009-0000-6192-8273}}
-\date{June 2026 \quad(\texttt{pcf-casoratian-catalogue} v0.1.3)}
+\date{June 2026 \quad(\texttt{pcf-casoratian-catalogue} v1.1)}
 
 \begin{document}
 \maketitle
@@ -52,15 +54,56 @@ convergent Wronskian as the case $c_0\equiv1$; order $3$ gives $+c_0$). The resu
 opens the order-$\ge3$ direction in a formalized polynomial-continued-fraction corpus
 previously confined to the order-$2$ (three-term) case --- the algebraic backbone of
 simultaneous / Hermite--Pad\'e approximation and of Ap\'ery-type irrationality
-certificates. An independent computer-algebra gate confirms the identity
+certificates. Building on the law we further formalize its \emph{fundamental-system
+converse} --- forward determinacy of a solution by its first $k$ values, and
+completeness of the basis once the initial Casoratian is a unit --- so that the
+solutions form a machine-checked \emph{fundamental set}; and we put that set to work
+through a reusable, machine-checked \emph{irrationality pipeline} that turns any integer
+fundamental set together with a shrinking \emph{real} Hermite--Pad\'e remainder into a
+proof of irrationality, the Casoratian discharging the non-vanishing
+(linear-independence) input \emph{structurally}. We instantiate it end-to-end on the
+order-$3$ recurrence $u(n{+}3)=2u(n{+}2)-u(n)$ (characteristic roots $\varphi,\psi,1$),
+whose fundamental set $\{1,F_n,F_{n+1}\}$ and remainder $F_n\varphi-F_{n+1}=-\psi^n\to0$
+re-derive the irrationality of the golden ratio $\varphi$ through the Casoratian --- an
+independent route from Mathlib's $\sqrt5$-based proof, and a demonstration that the
+determinantal machinery genuinely closes an irrationality theorem. We claim no novelty
+for $\varphi$'s irrationality itself, which is classical; the contributions are the
+uniform-in-$k$ machine-checked law, the formalized converse, and the reusable
+certificate engine. An independent computer-algebra gate confirms the identity
 symbolically at $k=3$, by exact-rational checks for $k=2,\dots,7$, and on named
 instances.
 \end{abstract}
 
+% ---------------------------------------------------------------------------
+% SHORT ABSTRACT (<=210 words) -- drop-in variant for venues that cap the
+% abstract length.  Swap the abstract environment above for this block.
+%
+% \begin{abstract}
+% For $k$ sequences over a commutative ring solving a common order-$k$ linear
+% recurrence, the Casoratian (discrete Wronskian) $C(n)=\det[s^{(t)}(n+i)]$ obeys
+% Abel's first-order law $C(n+1)=(-1)^{k-1}c_0(n)\,C(n)$, so only the lowest
+% coefficient survives.  The identity is classical; our contribution is its
+% treatment.  We give a single proof valid \emph{uniformly in the order} $k$ and
+% formalize it in Lean~4/Mathlib to a clean axiom cone, together with the closed
+% product form, the constant-coefficient form, and an integral-domain
+% non-vanishing (linear-independence) certificate.  Building on it we formalize the
+% \emph{fundamental-system converse} -- forward determinacy and completeness once
+% the initial Casoratian is a unit -- and a reusable, machine-checked
+% \emph{irrationality pipeline} that turns any integer fundamental set plus a
+% shrinking real Hermite--Pad\'e remainder into a proof of irrationality, the
+% Casoratian discharging the non-vanishing input structurally.  We instantiate it
+% on an order-$3$ recurrence to re-derive the irrationality of the golden ratio
+% through the Casoratian, claiming no novelty for $\varphi$ itself.  An independent
+% computer-algebra gate confirms the law symbolically.  Twenty-six declarations are
+% machine-checked.
+% \end{abstract}
+% ---------------------------------------------------------------------------
+
 \noindent\textbf{2020 MSC:} 39A06 (primary), 68V20, 11J72, 15A15.\quad
 \textbf{Keywords:} Casoratian, discrete Wronskian, Abel's formula,
-linear difference equation, higher-order recurrence, Hermite--Pad\'e approximation,
-Ap\'ery-type irrationality, Lean~4, Mathlib, formal verification, polynomial continued
+linear difference equation, higher-order recurrence, fundamental system,
+Hermite--Pad\'e approximation, Ap\'ery-type irrationality, irrationality criterion,
+golden ratio, Lean~4, Mathlib, formal verification, polynomial continued
 fractions.
 
 \section{Introduction}\label{sec:intro}
@@ -111,14 +154,28 @@ integral-domain non-vanishing (linear-independence) certificate, all formalized
 (Section~\ref{sec:cons});
 \item[(iii)] the order-$2$ and order-$3$ instances proved \emph{independently} by a
 direct cofactor computation, kept as faithfulness witnesses against the general
-proof (Proposition~\ref{prop:lowk}); and
+proof and machine-checked to coincide with the general determinant
+(Proposition~\ref{prop:lowk}); and
 \item[(iv)] an independent computer-algebra gate (Section~\ref{sec:gate}) that
 re-derives the law symbolically and on named instances, in the program's
-``gate-before-Lean'' discipline.
+``gate-before-Lean'' discipline;
+\item[(v)] the \emph{fundamental-system converse} (Section~\ref{sec:converse}),
+formalized: forward determinacy of a solution by its first $k$ values and completeness
+of the basis once the initial Casoratian is a unit, so that the solutions form a
+machine-checked fundamental set --- the object Hermite--Pad\'e / Ap\'ery applications
+consume; and
+\item[(vi)] a reusable, machine-checked \emph{irrationality pipeline}
+(Section~\ref{sec:cert}) that converts any integer fundamental set plus a shrinking
+real Hermite--Pad\'e remainder into a proof of irrationality --- with the non-vanishing
+input discharged structurally by the Casoratian --- instantiated end-to-end on a
+concrete order-$3$ recurrence to re-derive the irrationality of the golden ratio
+$\varphi$ through the discrete Wronskian.
 \end{enumerate}
 Concretely, this opens the order-$\ge3$ space inside a formalized PCF corpus that had
-treated only order $2$, and supplies a reusable, machine-checked independence
-certificate for future Hermite--Pad\'e constructions.
+treated only order $2$, supplies a reusable, machine-checked independence
+certificate for future Hermite--Pad\'e constructions, and --- through the converse and
+the irrationality pipeline --- carries that certificate all the way to a worked
+irrationality theorem.
 
 \section{The Casoratian of a linear recurrence}\label{sec:setup}
 
@@ -126,24 +183,28 @@ Throughout, $R$ is a commutative ring and $k\ge1$ a fixed order. We write a solu
 of~\eqref{eq:rec} simply as a sequence $s\colon\N\to R$ satisfying that identity for
 all $n$; no invertibility of the coefficients is assumed.
 
-\begin{definition}[Casoratian]\label{def:caso}
-For sequences $s^{(0)},\dots,s^{(k-1)}\colon\N\to R$, the \emph{Casoratian} at $n$ is
-the determinant~\eqref{eq:caso} of the $k\times k$ matrix whose $(i,t)$ entry is the
-$i$-shift of the $t$-th sequence, $s^{(t)}(n+i)$.
+\begin{definition}[Casoratian matrix and Casoratian]\label{def:caso}
+For sequences $s^{(0)},\dots,s^{(k-1)}\colon\N\to R$, the \emph{Casoratian matrix}
+$\CasoM(n)$ at $n$ is the $k\times k$ matrix whose $(i,t)$ entry is the $i$-shift of the
+$t$-th sequence, $s^{(t)}(n+i)$. The \emph{Casoratian} is its determinant,
+$\Caso(n)=\det\CasoM(n)$, the scalar of~\eqref{eq:caso}. Throughout we write $\CasoM$
+for the matrix and reserve $\Caso=\det\CasoM$ for the scalar determinant; in the
+formalization the matrix is \texttt{casoMat} and the Casoratian is
+\texttt{(casoMat\,s\,n).det}.
 \end{definition}
 
 Because $\det$ is invariant under transposition, it is immaterial whether one indexes
 rows by shifts and columns by solutions or vice versa; we fix rows~$=$~shifts. The
-two ``ends'' of $\Caso(n+1)$ are what drive the law:
+two ``ends'' of the next matrix $\CasoM(n+1)$ are what drive the law:
 \begin{itemize}
-\item \textbf{Top $k-1$ rows.} For $0\le i\le k-2$, row $i$ of $\Caso(n+1)$ is the
+\item \textbf{Top $k-1$ rows.} For $0\le i\le k-2$, row $i$ of $\CasoM(n+1)$ is the
 shift vector $\big(s^{(t)}(n+1+i)\big)_t$, which is precisely row $i+1$ of
-$\Caso(n)$. So the top $k-1$ rows of $\Caso(n+1)$ are the bottom $k-1$ rows of
-$\Caso(n)$, in order.
-\item \textbf{Bottom row.} Row $k-1$ of $\Caso(n+1)$ is the shift vector at
+$\CasoM(n)$. So the top $k-1$ rows of $\CasoM(n+1)$ are the bottom $k-1$ rows of
+$\CasoM(n)$, in order.
+\item \textbf{Bottom row.} Row $k-1$ of $\CasoM(n+1)$ is the shift vector at
 $n+k$, $\big(s^{(t)}(n+k)\big)_t$, which by the recurrence~\eqref{eq:rec} equals
 $\sum_{j=0}^{k-1}c_j(n)\,\big(s^{(t)}(n+j)\big)_t$, a linear combination of \emph{all}
-$k$ rows of $\Caso(n)$.
+$k$ rows of $\CasoM(n)$.
 \end{itemize}
 
 \section{The general-order Abel formula for the Casoratian}\label{sec:law}
@@ -167,33 +228,33 @@ Only the lowest coefficient $c_0$ enters; $c_1,\dots,c_{k-1}$ cancel.
 Let $\rho$ be the cyclic permutation of $\{0,1,\dots,k-1\}$ that moves every index up
 by one and wraps the top to the bottom, $\rho(i)=i+1$ for $i<k-1$ and
 $\rho(k-1)=0$; it is a single $k$-cycle, so $\sgn\rho=(-1)^{k-1}$. Let $M$ be
-$\Caso(n)$ with its rows permuted by $\rho$, i.e.\ row $i$ of $M$ is row $\rho(i)$ of
-$\Caso(n)$. By the observation in Section~\ref{sec:setup}, the top $k-1$ rows of $M$
-(namely rows $1,\dots,k-1$ of $\Caso(n)$) are exactly the top $k-1$ rows of
-$\Caso(n+1)$, while the bottom row of $M$ is row $0$ of $\Caso(n)$.
+$\CasoM(n)$ with its rows permuted by $\rho$, i.e.\ row $i$ of $M$ is row $\rho(i)$ of
+$\CasoM(n)$. By the observation in Section~\ref{sec:setup}, the top $k-1$ rows of $M$
+(namely rows $1,\dots,k-1$ of $\CasoM(n)$) are exactly the top $k-1$ rows of
+$\CasoM(n+1)$, while the bottom row of $M$ is row $0$ of $\CasoM(n)$.
 
 Replacing the bottom row of $M$ by the linear combination
-$\sum_{j=0}^{k-1}c_j(n)\,\big(\text{row }j\text{ of }\Caso(n)\big)$ produces exactly
-$\Caso(n+1)$, because that combination is the bottom row of $\Caso(n+1)$ and the top
+$\sum_{j=0}^{k-1}c_j(n)\,\big(\text{row }j\text{ of }\CasoM(n)\big)$ produces exactly
+$\CasoM(n+1)$, because that combination is the bottom row of $\CasoM(n+1)$ and the top
 rows already agree. Now take determinants. Multilinearity in the replaced row --- the
 content of \texttt{Matrix.det\_updateRow\_sum} --- gives
 \[
-  \det\Caso(n+1)
-   =\sum_{j=0}^{k-1}c_j(n)\,\det\!\big(M\text{ with bottom row }=\text{row }j\text{ of }\Caso(n)\big).
+  \det\CasoM(n+1)
+   =\sum_{j=0}^{k-1}c_j(n)\,\det\!\big(M\text{ with bottom row }=\text{row }j\text{ of }\CasoM(n)\big).
 \]
-Every summand with $j\ge1$ places into the bottom position a row of $\Caso(n)$ that
+Every summand with $j\ge1$ places into the bottom position a row of $\CasoM(n)$ that
 already occurs among the top $k-1$ rows of $M$, so that determinant vanishes. Only
-$j=0$ survives, and there the bottom row is the original row $0$ of $\Caso(n)$, so the
-summand is $c_0(n)\,\det M$. Finally $\det M=\sgn\rho\cdot\det\Caso(n)
-=(-1)^{k-1}\det\Caso(n)$. Combining gives~\eqref{eq:step}. A trivial induction on $n$,
-using $\Caso(0)$ as the base case and~\eqref{eq:step} at the inductive step, yields the
-product form~\eqref{eq:prod}.
+$j=0$ survives, and there the bottom row is the original row $0$ of $\CasoM(n)$, so the
+summand is $c_0(n)\,\det M$. Finally $\det M=\sgn\rho\cdot\det\CasoM(n)
+=(-1)^{k-1}\det\CasoM(n)$. Recalling $\Caso=\det\CasoM$, combining gives~\eqref{eq:step}.
+A trivial induction on $n$, using $\Caso(0)$ as the base case and~\eqref{eq:step} at the
+inductive step, yields the product form~\eqref{eq:prod}.
 \end{proof}
 
 \begin{remark}[What the formalization does, verbatim]\label{rem:lean-proof}
 The Lean development (Section~\ref{sec:lean}) realizes this proof literally. It builds
 $M$ as \texttt{(casoMat\,s\,n).submatrix (finRotate (k+1)) id} (Mathlib's
-\texttt{finRotate} is the cycle $\rho$), expresses $\Caso(n+1)$ as that submatrix with
+\texttt{finRotate} is the cycle $\rho$), expresses $\CasoM(n+1)$ as that submatrix with
 its last row updated to the recurrence combination, then rewrites with
 \texttt{Matrix.det\_updateRow\_sum} (the multilinear collapse to the surviving
 coefficient) and \texttt{Matrix.det\_permute} together with \texttt{sign\_finRotate}
@@ -241,7 +302,173 @@ constant convergent Wronskian $p_{n+1}q_n-p_nq_{n+1}=(-1)^n$.
 These hand proofs (\texttt{caso2\_step}, \texttt{caso3\_step}; the $3\times3$
 cofactor expansion is closed by \texttt{ring}) are retained as \emph{faithfulness
 witnesses}: they agree with Theorem~\ref{thm:ajl} at $k=2,3$, guarding against a
-vacuous or mis-signed general statement.
+vacuous or mis-signed general statement. Moreover, the bespoke order-$3$ expansion is
+reconciled with the general object by the machine-checked bridge
+\texttt{caso3\_matches\_general}, which proves \texttt{caso3 y z w n} equal to
+$\det\CasoM(n)$ for the general Casoratian matrix \texttt{casoMat} (Section~\ref{sec:law})
+specialized to $k=2$ with $\{y,z,w\}$; so the witnesses certify the \emph{formalized}
+general theorem (Theorem~\ref{thm:lean}), not merely a parallel polynomial identity.
+
+\section{The fundamental-system converse}\label{sec:converse}
+
+The Abel law and its non-vanishing corollary say that the chosen solutions stay
+\emph{independent}; the converse direction --- that they are also \emph{complete},
+i.e.\ span every solution --- is what upgrades $\{s^{(t)}\}$ from an independent family
+to a genuine \emph{fundamental set}, the object Hermite--Pad\'e and Ap\'ery
+constructions actually consume. We formalize it in two parts.
+
+\begin{theorem}[Fundamental-system converse; \textsc{proven}]\label{thm:converse}
+Let $s^{(0)},\dots,s^{(k-1)}\colon\N\to R$ solve the order-$k$ recurrence~\eqref{eq:rec}.
+\begin{enumerate}
+\item[\textup{(a)}] \emph{(Forward determinacy.)} Any solution of~\eqref{eq:rec} is
+determined by its first $k$ values: if $y,z\colon\N\to R$ both satisfy~\eqref{eq:rec}
+and $y(i)=z(i)$ for $0\le i<k$, then $y(n)=z(n)$ for all $n$. No invertibility
+hypothesis is needed.
+\item[\textup{(b)}] \emph{(Completeness.)} If the initial Casoratian $\Caso(0)$ is a
+unit of $R$, then every solution $y$ of~\eqref{eq:rec} is an $R$-linear combination of
+the $s^{(t)}$: there is $a\colon\{0,\dots,k-1\}\to R$ with
+$y(n)=\sum_{t} a_t\, s^{(t)}(n)$ for all $n$, given explicitly by the coordinates
+$a=\CasoM(0)^{-1}\,\big(y(0),\dots,y(k-1)\big)^{\!\top}$.
+\end{enumerate}
+Together with the non-vanishing certificate (Corollary~\ref{cor:indep}), $\{s^{(t)}\}$
+is then a machine-checked fundamental set.
+\end{theorem}
+
+\begin{proof}[Proof (as formalized)]
+Part (a) is a strong induction on $n$: for $n<k$ the hypothesis gives $y(n)=z(n)$
+directly, and for $n\ge k$ the recurrence writes both $y(n)$ and $z(n)$ as the
+\emph{same} $R$-combination of strictly earlier values, equal by the inductive
+hypothesis. For part (b), set $a=\CasoM(0)^{-1}\,(y(i))_{i<k}$ --- legitimate because
+$\Caso(0)$ is a unit, so the matrix $\CasoM(0)$ is invertible --- so that
+$\sum_t a_t\,s^{(t)}(i)=y(i)$ on the first window $0\le i<k$. The combination
+$\sum_t a_t\,s^{(t)}$ is itself a solution of~\eqref{eq:rec}, so by part (a) it agrees
+with $y$ at \emph{every} $n$. In particular completeness needs only that $\Caso(0)$ is a
+unit: the forward determinacy of (a) carries the initial-window agreement to all $n$
+with no reversibility --- no hypothesis on $c_0$ --- required, a small simplification
+over the two-hypothesis form in which we previously recorded this converse as merely
+\textsc{structural}.
+\end{proof}
+
+\begin{remark}[Lean]\label{rem:converse-lean}
+Part (a) is \texttt{PcfGeneralCaso.sol\_unique\_of\_init} (strong induction,
+\texttt{Nat.strong\_induction\_on}); part (b) is
+\texttt{PcfGeneralCaso.solution\_isLinearCombo}, which takes coordinates from Mathlib's
+nonsingular inverse (\texttt{Matrix.mul\_nonsing\_inv} at the initial window) and then
+invokes part (a) to propagate. Both are in \texttt{GeneralCaso.lean} (order $k+1$ via
+\texttt{Fin (k+1)}, Remark~\ref{rem:index}), with cone
+$\{\texttt{propext},\texttt{Classical.choice},\texttt{Quot.sound}\}$.
+\end{remark}
+
+\section{An irrationality certificate from the fundamental set}\label{sec:cert}
+
+We now put the fundamental set to number-theoretic work. The construction is the
+discrete heart of the Hermite--Pad\'e / Ap\'ery mechanism, reduced to its
+determinantal skeleton and machine-checked end to end.
+
+\paragraph{The window is a Casoratian matrix--vector product.}
+For coefficients $a\colon\{0,\dots,k-1\}\to R$, the linear form
+$L(n)=\sum_t a_t\,s^{(t)}(n)$ evaluated on the consecutive window $n,\dots,n+k-1$ is
+exactly $\CasoM(n)\,a$,
+\begin{equation}\label{eq:window}
+  \big(L(n+i)\big)_{0\le i<k}=\CasoM(n)\,a
+\end{equation}
+(\texttt{caso\_mulVec\_apply}). Hence, over an integral domain, if $\Caso(n)\ne0$ the
+matrix $\CasoM(n)$ is injective and a \emph{nontrivial} form ($a\ne0$) cannot vanish on
+a full window of $k$ consecutive indices (\texttt{linForm\_window\_ne\_zero});
+consequently such a form is \emph{frequently nonzero} as $n\to\infty$
+(\texttt{linForm\_frequently\_ne\_zero}). This is precisely the non-degeneracy the
+irrationality machinery needs --- and the non-vanishing Casoratian supplies it for free.
+
+\paragraph{The criterion.}
+The standard linear-form irrationality criterion is
+\texttt{irrational\_of\_linearForm\_frequently}: for $\alpha\in\R$ and integer sequences
+$p,q$, if the form $q(n)\alpha-p(n)$ is frequently nonzero and tends to $0$, then
+$\alpha$ is irrational. Were $\alpha=a/b$ rational ($b\ne0$), then
+$b\,(q(n)\alpha-p(n))=q(n)a-b\,p(n)\in\Z$ is a nonzero integer whenever the form is
+nonzero, so $|q(n)\alpha-p(n)|\ge1/|b|>0$ frequently, contradicting convergence to $0$.
+
+\paragraph{The capstone.}
+\texttt{irrational\_of\_fundamentalSet\_form} combines the two. Given an integer
+fundamental set $s$ (so $\Caso(n)\ne0$ for all $n$) and a \emph{real} coefficient vector
+$v\ne0$ for which the remainder
+\[
+  q(n)\alpha-p(n)=\sum_t v_t\,s^{(t)}(n)
+\]
+tends to $0$, the conclusion is that $\alpha$ is irrational. The frequently-nonzero
+hypothesis of the criterion is discharged \emph{structurally}: the nonzero integer
+Casoratian, cast into $\R$ (\texttt{Int.cast\_det} and injectivity of $\Z\hookrightarrow\R$),
+stays nonzero, so by~\eqref{eq:window} the real remainder is frequently nonzero. The
+only genuinely analytic input is the limit, kept as a single labelled hypothesis in the
+program's established style (cf.\ the conditional limits of the corpus's Topic~3 and
+Topic~5).
+
+\begin{remark}[Why the coefficients must be real]\label{rem:realv}
+The vector $v$ is real, not integer, and this is essential rather than cosmetic. With an
+integer form, the remainder $q(n)\alpha-p(n)$ would be forced to be a cast integer,
+which cannot shrink to $0$ while remaining frequently nonzero --- the criterion's two
+hypotheses would be jointly unsatisfiable and the ``certificate'' \emph{vacuous}. The
+honest Hermite--Pad\'e remainder is a genuine non-integer real combination of integer
+solutions: the integer Casoratian certifies their independence, while the real
+coefficients let the remainder converge.
+\end{remark}
+
+\paragraph{A concrete instance: the golden ratio.}
+Take the order-$3$ recurrence
+\begin{equation}\label{eq:fibrec}
+  u(n+3)=2\,u(n+2)-u(n),\qquad x^3-2x^2+1=(x^2-x-1)(x-1),
+\end{equation}
+with characteristic roots $\varphi=\tfrac{1+\sqrt5}{2}$, $\psi=\tfrac{1-\sqrt5}{2}$,
+and $1$. The three integer sequences $\{1,\,F_n,\,F_{n+1}\}$ --- the constant solution
+and two shifts of Fibonacci --- solve~\eqref{eq:fibrec} (\texttt{fibSol\_rec}), and their
+initial Casoratian is the Cassini determinant
+\[
+  \Caso(0)=\det\!\begin{pmatrix}1&0&1\\ 1&1&1\\ 1&1&2\end{pmatrix}=1
+\]
+(\texttt{fibCaso0}); since here $c_0\equiv-1$ is a unit, Corollary~\ref{cor:indep} gives
+$\Caso(n)\ne0$ for all $n$ (\texttt{fibCaso\_ne\_zero}), so $\{1,F_n,F_{n+1}\}$ is a
+fundamental set. Because $|\psi|<1$, the Hermite--Pad\'e remainder shrinks,
+\[
+  F_n\,\varphi-F_{n+1}=-\psi^{\,n}\longrightarrow 0
+\]
+(Binet's identity, Mathlib's \texttt{Real.fib\_succ\_sub\_goldenRatio\_mul\_fib};
+\texttt{fib\_remainder\_tendsto}). Feeding this through the capstone with the real
+coefficient vector $v=(0,\varphi,-1)$ yields
+\[
+  \texttt{goldenRatio\_irrational\_via\_caso}:\qquad \varphi\ \text{is irrational,}
+\]
+derived entirely through the discrete-Wronskian machinery.
+
+Note that $v=(0,\varphi,-1)$ assigns coefficient $0$ to the constant solution, so the
+form $F_n\varphi-F_{n+1}$ is two-term and this is deliberately the \emph{minimal}
+instance --- the $2\times2$ Casoratian of $\{F_n,F_{n+1}\}$ would already certify the
+non-vanishing here. What the order-$3$ pipeline genuinely exercises is its
+\emph{machinery}: the $3\times3$ Casoratian matrix, its integer determinant cast into
+$\R$, and the window/criterion plumbing, all run at $k=2$ (order $3$). We keep the
+instance minimal on purpose, reserving a genuinely order-$3$-essential target --- one in
+which all three solutions carry weight --- for the open problem of
+Section~\ref{sec:status}.
+
+\begin{remark}[Honest status of this instance]\label{rem:honest-phi}
+We claim \emph{no} novelty for the irrationality of $\varphi$: it is classical and
+already in Mathlib as \texttt{Real.goldenRatio\_irrational} (a $\sqrt5$-based argument).
+Our \texttt{goldenRatio\_irrational\_via\_caso} is an \emph{independent route}: the
+\emph{irrationality argument} does not invoke the irrationality of $\sqrt5$ --- it
+performs no $\sqrt5$-descent, deriving irrationality instead from the order-$3$
+Casoratian fundamental set and a shrinking remainder through the linear-form criterion.
+(The roots $\varphi,\psi$ are of course \emph{defined} via $\sqrt5$, and $|\psi|<1$ is a
+$\sqrt5$ fact; what differs is the \emph{mechanism} of the proof, not the avoidance of
+$\sqrt5$ as a quantity.) It serves as a
+\emph{faithfulness/demonstration witness} that the pipeline genuinely closes an
+irrationality theorem end to end, exactly as the by-hand low-order witnesses
+(Proposition~\ref{prop:lowk}) guard the general law. A geometric companion
+$\{1,2^n,3^n\}$ of $u(n+3)=6u(n+2)-11u(n+1)+6u(n)$, with explicit Casoratian
+$\Caso(n)=2\cdot6^n$ (\texttt{gcaso\_ne\_zero}) and window certificate
+\texttt{geom\_window\_ne\_zero}, exhibits the non-vanishing half on a second recurrence
+but carries \emph{no} shrinking remainder (all its roots have modulus $\ge1$), so it is
+deliberately \emph{not} promoted to an irrationality certificate. What remains genuinely
+open (Section~\ref{sec:status}) is to drive the same pipeline to a target \emph{not}
+already known to be irrational.
+\end{remark}
 
 \section{The machine-checked formalization}\label{sec:lean}
 
@@ -249,10 +476,12 @@ The development is in Lean~4 with Mathlib (toolchain pinned
 \texttt{leanprover/lean4:v4.30.0}, Mathlib \texttt{rev=v4.30.0}). It is built and
 axiom-checked inside the companion \texttt{pcf-delta} \texttt{PcfContinuant}
 project~\cite{pcfdelta}, whose \texttt{Check.lean} gate runs \texttt{\#print axioms}
-on every declaration; the two source files \texttt{GeneralCaso.lean} (the
-uniform-in-$k$ core, namespace \texttt{PcfGeneralCaso}) and \texttt{HigherCaso.lean}
-(the by-hand low-order witnesses, namespace \texttt{PcfHigherCaso}) are mirrored in
-this catalogue under \texttt{verify/}.
+on every declaration; the three source files \texttt{GeneralCaso.lean} (the
+uniform-in-$k$ core and the fundamental-system converse, namespace
+\texttt{PcfGeneralCaso}), \texttt{HigherCaso.lean} (the by-hand low-order witnesses,
+namespace \texttt{PcfHigherCaso}), and \texttt{HermitePade.lean} (the irrationality
+pipeline and the concrete certificates, namespace \texttt{PcfHermitePade}) are mirrored
+in this catalogue under \texttt{verify/}.
 
 \begin{remark}[Index convention]\label{rem:index}
 The formalization parametrizes the order as $k+1$ via \texttt{Fin (k+1)} (so the
@@ -263,39 +492,67 @@ law~\eqref{eq:step} under $k\mapsto k+1$: an index shift only, with $(-1)^{(k+1)
 \end{remark}
 
 \begin{theorem}[Formalized core; \textsc{proven}]\label{thm:lean}
-The following nine declarations are machine-checked with clean axiom cones --- each a
-subset of $\{\texttt{propext},\texttt{Classical.choice},\texttt{Quot.sound}\}$, no
+The following twenty-six declarations are machine-checked with clean axiom cones ---
+each a subset of $\{\texttt{propext},\texttt{Classical.choice},\texttt{Quot.sound}\}$, no
 \texttt{sorryAx}, sources free of \texttt{sorry}/\texttt{admit}/\texttt{native\_decide},
 \texttt{lake build} exit $0$.
 \begin{itemize}\sloppy
-\item \emph{Uniform in $k$} (\texttt{PcfGeneralCaso}, \texttt{GeneralCaso.lean}):
+\item \emph{Uniform-in-$k$ law} (\texttt{PcfGeneralCaso}, \texttt{GeneralCaso.lean}):
 \texttt{casoMat\_det\_step} is the step law~\eqref{eq:step}
 $\Caso(n+1)=(-1)^{k}c_0(n)\Caso(n)$ (order $k+1$; Remark~\ref{rem:index});
 \texttt{casoMat\_det\_eq} is the closed product form~\eqref{eq:prod};
 \texttt{casoMat\_det\_eq\_const} is the constant-coefficient power form
 (Corollary~\ref{cor:const}); \texttt{casoMat\_det\_ne\_zero\_of\_init} is the
 integral-domain non-vanishing certificate (Corollary~\ref{cor:indep}).
-\item \emph{Low-order witnesses} (\texttt{PcfHigherCaso}, \texttt{HigherCaso.lean}):
+\item \emph{Fundamental-system converse} (\texttt{PcfGeneralCaso},
+\texttt{GeneralCaso.lean}): \texttt{sol\_unique\_of\_init} (forward determinacy) and
+\texttt{solution\_isLinearCombo} (completeness) --- Theorem~\ref{thm:converse}.
+\item \emph{Low-order witnesses and the bridge} (\texttt{PcfHigherCaso},
+\texttt{HigherCaso.lean}):
 \texttt{caso2\_step} (the order-$2$ sign $-c_0$), \texttt{caso3\_step} (the order-$3$
 step $+c_0$), \texttt{caso3\_eq} (its product form), \texttt{caso3\_eq\_const} (its
-constant-coefficient case), and \texttt{caso3\_ne\_zero\_of\_init} (its domain
-non-vanishing certificate) --- Proposition~\ref{prop:lowk}.
+constant-coefficient case), \texttt{caso3\_ne\_zero\_of\_init} (its domain
+non-vanishing certificate), and \texttt{caso3\_matches\_general} (the bespoke
+$3\times3$ expansion equals $\det\CasoM$ of the general \texttt{casoMat} at $k=2$,
+reconciling the witnesses with the general theorem) --- Proposition~\ref{prop:lowk}.
+\item \emph{Irrationality pipeline} (\texttt{PcfHermitePade}, \texttt{HermitePade.lean}):
+\texttt{caso\_mulVec\_apply} (window $=\CasoM(n)\,a$, \eqref{eq:window}),
+\texttt{linForm\_window\_ne\_zero} (no full-window vanishing over a domain),
+\texttt{linForm\_frequently\_ne\_zero} (frequent non-vanishing),
+\texttt{irrational\_of\_linearForm\_frequently} (the linear-form irrationality
+criterion), and the
+capstone \texttt{irrational\_of\_fundamentalSet\_form} --- Section~\ref{sec:cert}.
+\item \emph{Concrete order-$3$ certificates} (\texttt{PcfHermitePade},
+\texttt{HermitePade.lean}): the geometric witness \texttt{gsol\_rec},
+\texttt{gcaso0}, \texttt{gcaso\_ne\_zero} ($\Caso(n)=2\cdot6^n$),
+\texttt{geom\_window\_ne\_zero}; and the golden-ratio certificate \texttt{fibSol\_rec},
+\texttt{fibCaso0} (Cassini $\Caso(0)=1$), \texttt{fibCaso\_ne\_zero},
+\texttt{fib\_remainder\_tendsto} ($F_n\varphi-F_{n+1}=-\psi^n\to0$), and
+\texttt{goldenRatio\_irrational\_via\_caso} ($\varphi$ irrational).
 \end{itemize}
-Of the nine, exactly two close with the minimal cone
+Of the twenty-six, exactly two close with the minimal cone
 $\{\texttt{propext},\texttt{Quot.sound}\}$ --- the by-hand witnesses
-\texttt{caso2\_step} and \texttt{caso3\_step}; the remaining seven additionally use
-\texttt{Classical.choice}. This \texttt{Classical.choice} usage is inherited from
-Mathlib's general determinant infrastructure (\texttt{Matrix.det} and the underlying
-permutation machinery), not a sign that the uniform-in-$k$ proof is in any meaningful
-sense less constructive than the by-hand cases; we report the cones factually rather
-than rank them.
+\texttt{caso2\_step} and \texttt{caso3\_step}; the remaining twenty-four additionally
+use \texttt{Classical.choice}. This \texttt{Classical.choice} usage is inherited from
+Mathlib's general infrastructure --- the determinant and permutation machinery
+(\texttt{Matrix.det}) throughout (including the determinant side of the bridge
+\texttt{caso3\_matches\_general}), the nonsingular matrix inverse
+(\texttt{Matrix.mul\_nonsing\_inv}) in the converse, and the real-analysis limit layer
+in the certificate --- not a sign that any proof is in a meaningful sense less
+constructive than the by-hand cases; we report the cones factually rather than rank
+them. No proof introduces any axiom outside the three-element clean set.
 \end{theorem}
 
-This follows the program's \emph{unconditional-core} pattern: there is no labelled
-analytic hypothesis here at all, since the statement is pure finitary algebra over a
-\texttt{CommRing} (the domain results add only \texttt{IsDomain\,R}). The Casoratian
+This follows the program's pattern: the law and converse have no labelled analytic
+hypothesis at all, being finitary algebra over a \texttt{CommRing} (the domain and
+completeness results add only \texttt{IsDomain\,R}, resp.\ a unit Casoratian); the
+irrationality certificate isolates its \emph{single} analytic input --- the limit
+$q(n)\alpha-p(n)\to0$ --- as a labelled hypothesis, discharged for the golden ratio by
+Mathlib's Binet identity. The Casoratian
 is defined as a genuine \texttt{Matrix} determinant, so the result is the honest
-determinantal identity, not a bespoke $k=2,3$ polynomial expression. Only the
+determinantal identity, not a bespoke $k=2,3$ polynomial expression --- and the order-$3$
+by-hand expansion is itself certified equal to that determinant by
+\texttt{caso3\_matches\_general} (Proposition~\ref{prop:lowk}). Only the
 order-$2$ \emph{step} sign is recorded here, as \texttt{caso2\_step}: the full
 order-$2$ closed-form suite already exists in \texttt{pcf-delta} as
 \texttt{casoratian\_eqG}~\cite{pcfdelta} and is not duplicated, whereas order $3$
@@ -307,7 +564,7 @@ In keeping with the catalogue's gate-before-Lean discipline, a \texttt{sympy} ha
 (\texttt{harness\_caso\_k.py}) re-derives the law independently of the Lean proof:
 \begin{itemize}
 \item a fully \emph{symbolic} proof at $k=3$: with generic symbolic data and generic
-$c_0,c_1,c_2$, $\det\Caso(1)-c_0\det\Caso(0)$ expands to $0$ and $\det\Caso(1)$ is
+$c_0,c_1,c_2$, $\Caso(1)-c_0\,\Caso(0)$ expands to $0$ and $\Caso(1)$ is
 free of $c_1,c_2$ (only $c_0$ enters);
 \item \emph{exact-rational} checks of both the step law~\eqref{eq:step} and the
 product form~\eqref{eq:prod} for $k=2,\dots,7$, over integer-coefficient recurrences
@@ -315,8 +572,9 @@ and initial data drawn from a \emph{fixed deterministic seed}
 (\texttt{random.Random(7k+101t+5)} for trial $t$), so the runs are exactly
 reproducible, confirming the alternating sign $(-1)^{k-1}$; and
 \item named instances: the Tribonacci recurrence $s(n+3)=s(n+2)+s(n+1)+s(n)$ ($c_0\equiv1$)
-has a \emph{constant} Casoratian, and the recurrence with $c_0(n)=n+1$ gives
-$\Caso(n)=n!\,\Caso(0)$ --- both matching~\eqref{eq:prod} exactly.
+has a \emph{constant} Casoratian, and, at $k=3$ (where the sign $(-1)^{k-1}=+1$), the
+recurrence with $c_0(n)=n+1$ gives $\Caso(n)=n!\,\Caso(0)$ --- both
+matching~\eqref{eq:prod} exactly.
 \end{itemize}
 All checks pass. The harness and the Lean sources are listed in
 Section~\ref{sec:code}.
@@ -326,38 +584,47 @@ Section~\ref{sec:code}.
 \begin{itemize}
 \item \textbf{PROVEN} (Lean, clean cones; Theorem~\ref{thm:lean}): the uniform-in-$k$
 step law and product form, the constant-coefficient power form, the integral-domain
-non-vanishing certificate, and the order-$2$/order-$3$ witnesses. No analytic input;
-the cones are subsets of $\{\texttt{propext},\texttt{Classical.choice},
-\texttt{Quot.sound}\}$ with no \texttt{sorryAx}.
+non-vanishing certificate, and the order-$2$/order-$3$ witnesses --- no analytic input.
+\item \textbf{PROVEN} (Lean, clean cones; Theorem~\ref{thm:converse}): the
+\emph{fundamental-system converse} --- forward determinacy
+(\texttt{sol\_unique\_of\_init}) with no invertibility hypothesis, and completeness
+(\texttt{solution\_isLinearCombo}) once $\Caso(0)$ is a unit. This was recorded as
+\textsc{structural} in v1.0 and is now formalized in the uniform-in-$k$, time-varying
+setting. The formalization in fact \emph{simplifies} the hypotheses we had anticipated:
+because forward determinacy needs no reversibility, completeness follows from the
+single assumption that $\Caso(0)$ is a unit, with no separate hypothesis that $c_0$ be a
+unit. (Over a field this is the textbook fundamental-set theorem,
+\cite[Ch.~2]{elaydi}; Mathlib's \texttt{LinearRecurrence} encodes only the
+constant-coefficient case~\cite{mathlib}.)
+\item \textbf{PROVEN} (Lean, clean cones; Section~\ref{sec:cert}): the
+\emph{irrationality pipeline} --- the window identity~\eqref{eq:window}, the
+domain-window non-vanishing, the linear-form irrationality criterion, and the capstone
+\texttt{irrational\_of\_fundamentalSet\_form} --- together with its end-to-end
+instantiation \texttt{goldenRatio\_irrational\_via\_caso} re-deriving $\varphi$
+irrational through the order-$3$ Casoratian. The certificate carries exactly one
+labelled analytic hypothesis (the remainder's limit), discharged here by Mathlib's
+Binet identity. \emph{We claim no novelty for the irrationality of $\varphi$ itself}
+(classical; already in Mathlib via $\sqrt5$): this is an independent Casoratian route
+and a demonstration witness that the pipeline closes an irrationality theorem, in the
+spirit of the by-hand faithfulness witnesses (Proposition~\ref{prop:lowk}), not a new
+number-theoretic result --- see Remark~\ref{rem:honest-phi}.
 \item \textbf{VERIFIED} (numerically/symbolically; Section~\ref{sec:gate}): the law at
 $k=3$ symbolically and for $k=2,\dots,7$ by exact-rational checks, plus the named
 instances.
-\item \textbf{STRUCTURAL} (classical; formalization pending): the
-\emph{fundamental-system converse} --- that when $\Caso(n_0)$ is a unit (over a domain,
-with $c_0$ invertible) every solution of~\eqref{eq:rec} is an $R$-linear combination of
-the $s^{(t)}$. This is the classical fundamental-set theorem
-(\cite[Ch.~2]{elaydi}); over a field it is immediate from the solution space being
-pinned by the first $k$ values, as Mathlib's \texttt{LinearRecurrence} already encodes
-in the constant-coefficient case~\cite{mathlib}. Over a general commutative ring it is
-less automatic, and two \emph{distinct} hypotheses enter: one needs $c_0$ to be a unit
-(so the recurrence is reversible and its solution set is a free $R$-module of rank $k$,
-pinned by any $k$ consecutive values), and one needs $\Caso(n_0)$ to be a unit (so the
-chosen solutions $s^{(0)},\dots,s^{(k-1)}$ actually span that module at the window
-$n_0$). The two interact through the step law~\eqref{eq:step} --- with $c_0$ a unit at
-every step, $\Caso$ is a unit at one window iff at all --- but neither implies the
-other. This is exactly why we record the converse here as \textsc{structural} rather
-than asserting it in that generality. We have not
-yet formalized it in the present uniform-in-$k$, time-varying setting.
 \item \textbf{CONJECTURED / open}: a concrete simultaneous-Hermite--Pad\'e PCF whose
-order-$3$ Casoratian, via Corollary~\ref{cor:indep}, furnishes an Ap\'ery-style
-irrationality certificate. This is the genuinely open next entry; the present note ---
-together with the converse above --- supplies the determinantal machinery it will rely
-on.
+order-$3$ Casoratian drives the now-proven pipeline (Section~\ref{sec:cert}) to the
+irrationality of a constant \emph{not already known} to be irrational --- an
+Ap\'ery-style certificate ($\zeta(3)$-type) rather than the golden-ratio demonstration.
+This is the genuinely open next entry: the determinantal machinery, the converse, and
+the certificate engine it consumes are now all in place; what remains is to exhibit a
+target recurrence whose shrinking remainder yields a \emph{new} irrationality theorem.
 \end{itemize}
 We claim no novelty for Abel's formula itself, which is classical
-(\cite[Ch.~2]{elaydi},\cite{kelleypeterson},\cite{milnethomson}); the contribution is the
-uniform-in-$k$ machine-checked proof and the opening of the order-$\ge3$ direction in
-this corpus.
+(\cite[Ch.~2]{elaydi},\cite{kelleypeterson},\cite{milnethomson}), nor for the
+irrationality of the golden ratio; the contributions are the
+uniform-in-$k$ machine-checked proof, the formalized fundamental-system converse, the
+reusable machine-checked irrationality pipeline, and the opening of the order-$\ge3$
+direction in this corpus.
 
 \section{Relation to prior work and novelty}\label{sec:related}
 
@@ -392,7 +659,13 @@ classical and not in question: the general-order law with time-varying coefficie
 textbook (\cite[Ch.~2]{elaydi},\cite{kelleypeterson},\cite{milnethomson}), for which we
 claim no novelty. Our claim is strictly one of \emph{formalization coverage} --- the
 machine-checked theorem, uniform in $k$ and with time-varying $c_j(n)$, that the present
-note contributes and gate-checks.
+note contributes and gate-checks. The irrationality pipeline of
+Section~\ref{sec:cert} is likewise complementary to~\cite{apery}: where that development
+hard-wires a $2\times2$ Casoratian into a single bespoke $\zeta(3)$ certificate, ours is
+a \emph{reusable} order-$(k{+}1)$ engine that consumes any integer fundamental set and a
+shrinking real remainder, here demonstrated on the classical golden ratio (for which we
+claim no number-theoretic novelty, Remark~\ref{rem:honest-phi}) and awaiting a target
+not already known irrational (Section~\ref{sec:status}).
 
 \paragraph{Within this corpus, and a note on hosting.}
 The deposited corpus had formalized the Casoratian only in its order-$2$ form --- the
@@ -417,14 +690,17 @@ analogue (Liouville / Jacobi). The note supplements the SIARC program~\cite{siar
 
 \begin{sloppypar}
 The Lean sources are \texttt{verify/GeneralCaso.lean} (namespace
-\texttt{PcfGeneralCaso}) and \texttt{verify/HigherCaso.lean} (namespace
-\texttt{PcfHigherCaso}); they are built and axiom-cone-checked inside the
+\texttt{PcfGeneralCaso}; the uniform-in-$k$ law and the fundamental-system converse),
+\texttt{verify/HigherCaso.lean} (namespace \texttt{PcfHigherCaso}; the by-hand
+low-order witnesses), and \texttt{verify/HermitePade.lean} (namespace
+\texttt{PcfHermitePade}; the irrationality pipeline and the concrete order-$3$
+certificates); they are built and axiom-cone-checked inside the
 \texttt{pcf-delta} \texttt{PcfContinuant} project~\cite{pcfdelta} via
 \texttt{lake env lean Check.lean} (toolchain \texttt{leanprover/lean4:v4.30.0},
-Mathlib \texttt{rev=v4.30.0}); the verbatim \texttt{\#print axioms} output for the nine
-declarations is mirrored in this repository as \texttt{verify/AXIOM\_CONES.txt}, so the
-cone partition of Section~\ref{sec:lean} is reproducible here without rebuilding the host
-project. The independent symbolic gate is
+Mathlib \texttt{rev=v4.30.0}); the verbatim \texttt{\#print axioms} output for the
+twenty-six declarations is mirrored in this repository as
+\texttt{verify/AXIOM\_CONES.txt}, so the cone partition of Section~\ref{sec:lean} is
+reproducible here without rebuilding the host project. The independent symbolic gate is
 \texttt{harness\_caso\_k.py} (\texttt{sympy}~\cite{sympy}; run
 \texttt{python harness\_caso\_k.py}), which prints the $k=3$ symbolic proof, the
 exact-rational $k=2,\dots,7$ verification, and the named instances. Public repository:

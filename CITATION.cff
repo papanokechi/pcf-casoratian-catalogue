@@ -14,8 +14,8 @@ abstract: >-
   corpus -c_0; at k = 3 it flips to +c_0. The (-1)^(k-1) sign is now established as a single uniform theorem over all k, not merely k = 2, 3. The deposited corpus formalized only
   order-2 (three-term) Casoratians; this is the first order->=3 result - the
   algebraic backbone of simultaneous / Hermite-Pade approximation, the engine of
-  Apery-type irrationality proofs. Catalogue entry C1 provides nine Lean theorems across two namespaces (uniform-in-k namespace PcfGeneralCaso: casoMat_det_step, casoMat_det_eq, casoMat_det_eq_const, casoMat_det_ne_zero_of_init; by-hand low-order namespace PcfHigherCaso: caso3_step, caso3_eq, caso3_eq_const,
-  caso3_ne_zero_of_init, and caso2_step as an order-2 faithfulness witness) plus a
+  Apery-type irrationality proofs. Catalogue entry C1 provides twenty-six Lean theorems across three namespaces (uniform-in-k namespace PcfGeneralCaso: casoMat_det_step, casoMat_det_eq, casoMat_det_eq_const, casoMat_det_ne_zero_of_init; the fundamental-system converse, also PcfGeneralCaso: sol_unique_of_init for forward determinacy and solution_isLinearCombo for completeness once the initial Casoratian is a unit, so the solutions form a machine-checked fundamental set; by-hand low-order namespace PcfHigherCaso: caso3_step, caso3_eq, caso3_eq_const,
+  caso3_ne_zero_of_init, caso2_step as an order-2 faithfulness witness, and caso3_matches_general bridging the bespoke 3x3 caso3 to det of the general casoMat at k=2; and a Hermite-Pade / Apery irrationality pipeline, namespace PcfHermitePade: caso_mulVec_apply, linForm_window_ne_zero, linForm_frequently_ne_zero, irrational_of_linearForm_frequently, and the capstone irrational_of_fundamentalSet_form, instantiated end-to-end on the order-3 recurrence u(n+3)=2u(n+2)-u(n) to re-derive Irrational phi through the Casoratian via goldenRatio_irrational_via_caso - an independent route from Mathlib's sqrt5-based proof, with no novelty claimed for phi's irrationality itself, only for the reusable machine-checked pipeline) plus a
   sympy gate (harness_caso_k.py: a symbolic proof at k=3, exact-rational
   verification k=2..7, and named instances). Epistemic status (SIARC four-class):
   PROVEN - each theorem's axiom cone is a subset of {propext, Classical.choice,
@@ -27,10 +27,18 @@ authors:
   # ORCID source-verified from the ORCID registry page.
   - family-names: "Papanokechi"
     orcid: "https://orcid.org/0009-0000-6192-8273"
-version: "0.1.3"
-date-released: "2026-06-12"
+version: "1.1"
+date-released: "2026-06-13"
 license: Apache-2.0
 repository-code: "https://github.com/papanokechi/pcf-casoratian-catalogue"
+doi: "10.5281/zenodo.20663484"
+identifiers:
+  - type: doi
+    value: "10.5281/zenodo.20663484"
+    description: "Concept DOI (cite-all / all versions)"
+  - type: doi
+    value: "10.5281/zenodo.20663485"
+    description: "Version DOI (v1.0, deposited 2026-06-12)"
 keywords:
   - "polynomial continued fractions"
   - "Casoratian"
@@ -40,6 +48,9 @@ keywords:
   - "simultaneous approximation"
   - "Abel-Jacobi-Liouville formula"
   - "Apery-type irrationality"
+  - "fundamental system"
+  - "irrationality criterion"
+  - "golden ratio"
   - "Lean 4"
   - "Mathlib"
   - "formal verification"
@@ -84,16 +95,28 @@ references:
     doi: "10.5281/zenodo.19885549"
     notes: "Umbrella research program. relation: isPartOf."
     year: 2026
-# STATUS: NOT YET DEPOSITED. This CITATION.cff is documentation only, drafted
-# 2026-06-10. Deposit is OPERATOR-GATED: no Zenodo record, version DOI, concept DOI,
-# or GitHub release has been minted. The top-level doi:/identifiers: block is
-# deliberately omitted until a concept DOI is minted by hand at deposit time; add it
-# then (concept = cite-all, plus a version DOI per release), mirroring the pcf-delta
-# convention. All four reference DOIs above were verified live via doi.org 302
+# STATUS: DEPOSITED 2026-06-12 on Zenodo as version "1.0". Concept (cite-all) DOI
+# 10.5281/zenodo.20663484; version DOI 10.5281/zenodo.20663485. The top-level doi: is
+# the concept DOI (cite-all), with both DOIs listed under identifiers:, mirroring the
+# pcf-delta convention. All four reference DOIs below were verified live via doi.org 302
 # redirect to zenodo.org on 2026-06-10 (not asserted from memory). License: code is
-# Apache-2.0 (Lean formalization + sympy harness); the repo now ALSO ships the documenting
-# manuscript higher_casoratian.tex/.pdf (entry C1), so the earlier "no separate paper unit"
-# note no longer holds; a distinct CC-BY-4.0 document license for the PDF is an operator
-# decision at mint. Public GitHub
-# repo https://github.com/papanokechi/pcf-casoratian-catalogue. Do NOT deposit without
-# operator sign-off.
+# Apache-2.0 (Lean formalization + sympy harness); the repo also ships the documenting
+# manuscript higher_casoratian.tex/.pdf (entry C1) under the same Apache-2.0 (no separate
+# CC-BY-4.0 was applied to the PDF at deposit). Public GitHub
+# repo https://github.com/papanokechi/pcf-casoratian-catalogue. Future revisions deposit
+# via Zenodo "New version" under the concept DOI; operator-gated -- do NOT cut a new
+# version without operator sign-off.
+# VERSION 1.1 (DRAFT -- NOT YET MINTED, prepared 2026-06-13): promotes the Section-7
+# fundamental-system converse (STRUCTURAL -> PROVEN: sol_unique_of_init,
+# solution_isLinearCombo) and adds a now-PROVEN Hermite-Pade/Apery irrationality pipeline
+# (namespace PcfHermitePade, source HermitePade.lean) re-deriving Irrational phi via the
+# order-3 Casoratian (goldenRatio_irrational_via_caso); the formalized core grows from
+# nine to twenty-six declarations (all cones subset of {propext, Classical.choice,
+# Quot.sound}, captured live 2026-06-13; full corpus 86 cones). A peer-review hardening pass
+# added the bridge lemma caso3_matches_general (bespoke caso3 = det casoMat at k=2) and
+# corrected the manuscript notation (matrix W vs determinant C=det W), the sqrt5 honesty
+# wording, and the linear-form criterion naming. No novelty is claimed for phi's irrationality
+# (classical; Mathlib's is sqrt5-based) -- only for the converse and the reusable pipeline.
+# date-released and version above are provisional; a v1.1 version DOI will exist only after
+# the operator commits and mints a Zenodo "New version" under concept DOI
+# 10.5281/zenodo.20663484. The v1.0 version DOI 10.5281/zenodo.20663485 is unchanged.

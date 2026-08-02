@@ -1,50 +1,85 @@
-AXIOM CONES — catalogue entry C1 (higher-order / uniform-in-k Casoratian Abel law)
+AXIOM CONES — catalogue entry C1 (higher-order Casoratian: Abel law, fundamental-system
+converse, and a Hermite–Padé / Apéry irrationality certificate)
 ===================================================================================
 
-This file mirrors the genuine `#print axioms` output for the nine machine-checked
+This file mirrors the genuine `#print axioms` output for the twenty-six machine-checked
 declarations of this catalogue entry, so the PROVEN axiom-cone claim of the manuscript
-(higher_casoratian.tex, Section 5, Theorem "Formalized core") is self-contained in this
-repository and not only asserted in the companion host project.
+(higher_casoratian.tex, Section "The machine-checked formalization", Theorem "Formalized
+core") is self-contained in this repository and not only asserted in the companion host
+project.
 
 PROVENANCE (not asserted from memory — captured from a live run):
   command : lake env lean Check.lean
   project : pcf-delta / lean/pcf_continuant  (PcfContinuant), which hosts and gates the
-            Lean core; verify/GeneralCaso.lean and verify/HigherCaso.lean in THIS repo are
-            byte-faithful mirrors of PcfContinuant/GeneralCaso.lean and
-            PcfContinuant/HigherCaso.lean.
+            Lean core; verify/GeneralCaso.lean, verify/HigherCaso.lean and
+            verify/HermitePade.lean in THIS repo are byte-faithful mirrors of
+            PcfContinuant/GeneralCaso.lean, PcfContinuant/HigherCaso.lean and
+            PcfContinuant/HermitePade.lean.
   toolchain: leanprover/lean4 v4.30.0, Mathlib rev=v4.30.0 (pinned via lake-manifest.json)
   result  : process exit code 0; no `sorryAx` in any cone below; sources contain no
             sorry / admit / native_decide.
-  date    : 2026-06-12
+  date    : 2026-06-13
 
-THE NINE DECLARATIONS (verbatim `#print axioms` lines)
-------------------------------------------------------
-Uniform-in-k core (namespace PcfGeneralCaso, GeneralCaso.lean):
+THE TWENTY-SIX DECLARATIONS (verbatim `#print axioms` lines)
+------------------------------------------------------------
+Uniform-in-k law (namespace PcfGeneralCaso, GeneralCaso.lean):
   'PcfGeneralCaso.casoMat_det_step' depends on axioms: [propext, Classical.choice, Quot.sound]
   'PcfGeneralCaso.casoMat_det_eq' depends on axioms: [propext, Classical.choice, Quot.sound]
   'PcfGeneralCaso.casoMat_det_eq_const' depends on axioms: [propext, Classical.choice, Quot.sound]
   'PcfGeneralCaso.casoMat_det_ne_zero_of_init' depends on axioms: [propext, Classical.choice, Quot.sound]
 
-By-hand low-order witnesses (namespace PcfHigherCaso, HigherCaso.lean):
+Fundamental-system converse (namespace PcfGeneralCaso, GeneralCaso.lean):
+  'PcfGeneralCaso.sol_unique_of_init' depends on axioms: [propext, Classical.choice, Quot.sound]
+  'PcfGeneralCaso.solution_isLinearCombo' depends on axioms: [propext, Classical.choice, Quot.sound]
+
+By-hand low-order witnesses and the bridge (namespace PcfHigherCaso, HigherCaso.lean):
   'PcfHigherCaso.caso2_step' depends on axioms: [propext, Quot.sound]
   'PcfHigherCaso.caso3_step' depends on axioms: [propext, Quot.sound]
   'PcfHigherCaso.caso3_eq' depends on axioms: [propext, Classical.choice, Quot.sound]
   'PcfHigherCaso.caso3_eq_const' depends on axioms: [propext, Classical.choice, Quot.sound]
   'PcfHigherCaso.caso3_ne_zero_of_init' depends on axioms: [propext, Classical.choice, Quot.sound]
+  'PcfHigherCaso.caso3_matches_general' depends on axioms: [propext, Classical.choice, Quot.sound]
+    (bridge: the bespoke 3x3 cofactor expansion caso3 equals det of the general casoMat at
+     k=2, reconciling the minimal-cone witnesses with the formalized general theorem)
 
-PARTITION (matches Section 5 of the manuscript exactly)
--------------------------------------------------------
-  * All nine cones are subsets of {propext, Classical.choice, Quot.sound}.
+Irrationality pipeline (namespace PcfHermitePade, HermitePade.lean):
+  'PcfHermitePade.caso_mulVec_apply' depends on axioms: [propext, Classical.choice, Quot.sound]
+  'PcfHermitePade.linForm_window_ne_zero' depends on axioms: [propext, Classical.choice, Quot.sound]
+  'PcfHermitePade.linForm_frequently_ne_zero' depends on axioms: [propext, Classical.choice, Quot.sound]
+  'PcfHermitePade.irrational_of_linearForm_frequently' depends on axioms: [propext, Classical.choice, Quot.sound]
+  'PcfHermitePade.irrational_of_fundamentalSet_form' depends on axioms: [propext, Classical.choice, Quot.sound]
+
+Concrete order-3 certificates (namespace PcfHermitePade, HermitePade.lean):
+  'PcfHermitePade.gsol_rec' depends on axioms: [propext, Classical.choice, Quot.sound]
+  'PcfHermitePade.gcaso0' depends on axioms: [propext, Classical.choice, Quot.sound]
+  'PcfHermitePade.gcaso_ne_zero' depends on axioms: [propext, Classical.choice, Quot.sound]
+  'PcfHermitePade.geom_window_ne_zero' depends on axioms: [propext, Classical.choice, Quot.sound]
+  'PcfHermitePade.fibSol_rec' depends on axioms: [propext, Classical.choice, Quot.sound]
+  'PcfHermitePade.fibCaso0' depends on axioms: [propext, Classical.choice, Quot.sound]
+  'PcfHermitePade.fibCaso_ne_zero' depends on axioms: [propext, Classical.choice, Quot.sound]
+  'PcfHermitePade.fib_remainder_tendsto' depends on axioms: [propext, Classical.choice, Quot.sound]
+  'PcfHermitePade.goldenRatio_irrational_via_caso' depends on axioms: [propext, Classical.choice, Quot.sound]
+
+PARTITION (matches the manuscript exactly)
+------------------------------------------
+  * All twenty-six cones are subsets of {propext, Classical.choice, Quot.sound}.
   * Exactly TWO close with the minimal cone {propext, Quot.sound}: the by-hand step
     witnesses caso2_step and caso3_step (their proofs use no `classical` tactic and avoid
     Mathlib's general determinant machinery, closing by direct cofactor `ring`).
-  * The remaining SEVEN additionally use Classical.choice; this is inherited from Mathlib's
-    general `Matrix.det` / permutation infrastructure (it enters even casoMat_det_step via
-    the `classical` tactic and the determinant sum), not from any analytic input. The
-    statements are pure finitary algebra over a CommRing (the two `_ne_zero_of_init`
-    certificates additionally assume `IsDomain R`).
+  * The remaining TWENTY-FOUR additionally use Classical.choice; this is inherited from
+    Mathlib's general infrastructure — the `Matrix.det` / permutation machinery throughout
+    (including the determinant side of the bridge caso3_matches_general),
+    the nonsingular matrix inverse `Matrix.mul_nonsing_inv` in the converse
+    (solution_isLinearCombo), and the real-analysis limit layer in the certificate
+    (fib_remainder_tendsto, irrational_of_*) — not from any analytic axiom. The law and
+    converse are pure finitary algebra over a CommRing (the `_ne_zero_of_init` certificates
+    and the window/pipeline lemmas additionally assume `IsDomain R`; completeness assumes a
+    unit initial Casoratian). The irrationality certificate carries exactly one labelled
+    analytic hypothesis — the remainder's limit q(n)·α − p(n) → 0 — discharged for the
+    golden ratio by Mathlib's Binet identity Real.fib_succ_sub_goldenRatio_mul_fib.
+  * No declaration introduces any axiom outside the three-element clean set.
 
-NOTE. Check.lean runs `#print axioms` over the whole pcf-delta corpus (70+ declarations);
-the nine lines above are the entry-C1 subset, reproduced verbatim from that run. The full
-gate output additionally confirms every other corpus declaration also closes within
-{propext, Classical.choice, Quot.sound} with no sorryAx.
+NOTE. Check.lean runs `#print axioms` over the whole pcf-delta corpus (86 declarations);
+the twenty-six lines above are the entry-C1 subset, reproduced verbatim from that run.
+The full gate output additionally confirms every other corpus declaration also closes
+within {propext, Classical.choice, Quot.sound} with no sorryAx.

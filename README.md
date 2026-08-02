@@ -1,9 +1,15 @@
 # pcf-casoratian-catalogue
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20663484.svg)](https://doi.org/10.5281/zenodo.20663484)
+
 > **Disambiguation / status.** This repository is the *machine-checkable
 > Casoratian closed-form catalogue*. It now holds its **first proven entry** — the
 > higher-order (order ≥ 3) Casoratian Abel–Jacobi–Liouville law (entry **C1**
-> below). It remains **distinct from** the
+> below), **deposited on Zenodo 2026-06-12** as version 1.0 (concept DOI
+> [10.5281/zenodo.20663484](https://doi.org/10.5281/zenodo.20663484)). A **v1.1
+> promotion** (prepared 2026-06-13, not yet minted — operator-gated) extends C1 with a
+> formalized **fundamental-system converse** and a machine-checked **irrationality
+> certificate** re-deriving `Irrational φ` through the order-3 Casoratian. It remains **distinct from** the
 > published companion repository
 > [`papanokechi/pcf-casoratian-identities`](https://github.com/papanokechi/pcf-casoratian-identities),
 > which accompanies the deposited paper *"Polynomial Continued Fractions: a
@@ -54,7 +60,7 @@ A catalogue entry is depositable at grade PROVEN only after step 4.
 
 ## Catalogue entries
 
-### C1 — Higher-order Casoratian (order ≥ 3, now uniform in `k`): the Abel–Jacobi–Liouville law · PROVEN
+### C1 — Higher-order Casoratian (order ≥ 3, uniform in `k`): Abel–Jacobi–Liouville law, fundamental-system converse, and an irrationality certificate · PROVEN
 
 The deposited corpus formalizes only **order-2** (three-term) Casoratians. C1 opens
 the **order ≥ 3** space — the algebraic backbone of *simultaneous / Hermite–Padé*
@@ -80,11 +86,21 @@ the sign is the corpus `-(c_0 n)`; at `k = 3` it is `+(c_0 n)`. The
 | **PROVEN** | `casoMat_det_eq` — uniform closed form `C(n) = (Π_{m<n} (-1)^k c₀ m)·C(0)` | ″ |
 | **PROVEN** | `casoMat_det_eq_const` — constant-`c₀` power form `C(n) = ((-1)^k c₀)ⁿ·C(0)` | ″ |
 | **PROVEN** | `casoMat_det_ne_zero_of_init` — domain non-degeneracy at all `k` | ″ |
+| **PROVEN** | `sol_unique_of_init` — converse (a): forward determinacy, a solution is pinned by its first `k` values (no invertibility) | ″ |
+| **PROVEN** | `solution_isLinearCombo` — converse (b): completeness — every solution is an `R`-combination of the basis once `C(0)` is a unit | ″ |
 | **PROVEN** | `caso3_step` — order-3 step `C₃(n+1) = c₀(n)·C₃(n)` | `verify/HigherCaso.lean` |
 | **PROVEN** | `caso3_eq` — closed product form `C₃(n) = (Π_{m<n} c₀ m)·C₃(0)` | ″ |
 | **PROVEN** | `caso3_eq_const` — constant-`c₀` case `C₃(n) = c₀ⁿ·C₃(0)` | ″ |
 | **PROVEN** | `caso3_ne_zero_of_init` — domain non-degeneracy `C₃(n) ≠ 0` (independence certificate) | ″ |
 | **PROVEN** | `caso2_step` — order-2 faithfulness witness `C₂(n+1) = -c₀(n)·C₂(n)` | ″ |
+| **PROVEN** | `caso3_matches_general` — bridge: the bespoke 3×3 `caso3` equals `det` of the general `casoMat` at `k=2` (reconciles the minimal-cone witnesses with the formalized general theorem) | ″ |
+| **PROVEN** | `caso_mulVec_apply` — a linear form's window `= C(n) · a` | `verify/HermitePade.lean` |
+| **PROVEN** | `linForm_window_ne_zero`, `linForm_frequently_ne_zero` — nontrivial form can't vanish on a full window; hence frequently nonzero | ″ |
+| **PROVEN** | `irrational_of_linearForm_frequently` — the standard linear-form irrationality criterion | ″ |
+| **PROVEN** | `irrational_of_fundamentalSet_form` — capstone: integer fundamental set + shrinking **real** remainder ⇒ irrational | ″ |
+| **PROVEN** | `gsol_rec`, `gcaso0`, `gcaso_ne_zero`, `geom_window_ne_zero` — geometric witness `{1,2ⁿ,3ⁿ}`, `C(n)=2·6ⁿ` | ″ |
+| **PROVEN** | `fibSol_rec`, `fibCaso0`, `fibCaso_ne_zero`, `fib_remainder_tendsto` — golden-ratio set `{1,Fₙ,Fₙ₊₁}`, remainder `Fₙφ−Fₙ₊₁=−ψⁿ→0` | ″ |
+| **PROVEN** | `goldenRatio_irrational_via_caso` — `Irrational φ` via the order-3 Casoratian (independent of Mathlib's √5 proof) | ″ |
 | **VERIFIED** | symbolic proof `k=3` + exact-rational `k=2..7` + named instances | `harness_caso_k.py` |
 
 **Note (matrix convention).** `GeneralCaso.lean` indexes the order `k+1` by
@@ -96,15 +112,16 @@ the combination to its `c₀` coefficient and `sign_finRotate` supplies the cycl
 sign `(-1)^k`. `HigherCaso.lean`'s by-hand `k = 2, 3` proofs remain as independent
 faithfulness witnesses.
 
-**Cone (the PROVEN gate).** All nine Lean theorems have axiom cones ⊆
+**Cone (the PROVEN gate).** All twenty-six Lean theorems have axiom cones ⊆
 `{propext, Classical.choice, Quot.sound}` with no `sorryAx` (the order-2/3 `_step`
 lemmas need only `{propext, Quot.sound}`); the sources have zero
-`sorry`/`admit`/`native_decide`. `verify/HigherCaso.lean` and
-`verify/GeneralCaso.lean` are built and
+`sorry`/`admit`/`native_decide`. `verify/HigherCaso.lean`,
+`verify/GeneralCaso.lean` and `verify/HermitePade.lean` are built and
 cone-checked under the pinned `leanprover/lean4:v4.30.0` + Mathlib `v4.30.0`
 toolchain inside the companion `pcf-delta` `PcfContinuant` project and its
 `Check.lean` gate, where C1 is cross-listed alongside the order-2 general
-Casoratian (`casoratian_eqG`).
+Casoratian (`casoratian_eqG`). The verbatim `#print axioms` output for all
+twenty-six declarations is mirrored at `verify/AXIOM_CONES.txt`.
 
 **Named instances** (`harness_caso_k.py`): the Tribonacci-type recurrence
 `s(n+3) = s(n+2)+s(n+1)+s(n)` (`c₀ ≡ 1`) has a *constant* Casoratian; the
@@ -123,9 +140,15 @@ result. Direct predecessors this entry *continues* / *supplements*:
 | isPartOf | SIARC program statement | [10.5281/zenodo.19885549](https://doi.org/10.5281/zenodo.19885549) |
 
 **Open / next (CONJECTURED).** A concrete simultaneous-Hermite–Padé PCF whose
-order-3 Casoratian furnishes an Apéry-style irrationality certificate. The
-`(-1)^{k-1}` uniform-`k` sign theorem, previously listed open here, is now
-**PROVEN** (`casoMat_det_step`, gate-checked for all `k`).
+order-3 Casoratian drives the now-proven pipeline to the irrationality of a constant
+**not already known** to be irrational — an Apéry-style (ζ(3)-type) certificate rather
+than the golden-ratio demonstration. Both items previously listed open here are now
+**PROVEN**: the `(-1)^{k-1}` uniform-`k` sign theorem (`casoMat_det_step`) and the
+fundamental-system converse (`sol_unique_of_init`, `solution_isLinearCombo`), and the
+irrationality pipeline is now machine-checked end-to-end on the golden ratio
+(`goldenRatio_irrational_via_caso`; no novelty claimed for φ's irrationality itself,
+which is classical — only for the reusable pipeline). What remains is to exhibit a
+target recurrence whose shrinking remainder yields a *new* irrationality theorem.
 
 ## Layout
 
@@ -135,11 +158,15 @@ order-3 Casoratian furnishes an Apéry-style irrationality certificate. The
     verify/             Lean finitary cores, one per family + cone check
       HigherCaso.lean   entry C1 — order-2/3 Casoratian, by-hand (PROVEN; built and
                         cone-checked in the pinned pcf-delta PcfContinuant project)
-      GeneralCaso.lean  entry C1 — uniform order-(k+1) Casoratian law (PROVEN; same
-                        gate; the single-theorem general-k companion to HigherCaso)
-    .zenodo.json        deposit metadata (Zenodo native; operator-gated, NOT YET
-                        DEPOSITED — see notes field)
-    CITATION.cff        citation metadata (CFF 1.2.0; DOI block added at deposit time)
+      GeneralCaso.lean  entry C1 — uniform order-(k+1) Casoratian law + fundamental-
+                        system converse (PROVEN; same gate)
+      HermitePade.lean  entry C1 — irrationality pipeline + concrete order-3 certificates
+                        re-deriving Irrational φ via the Casoratian (PROVEN; same gate)
+      AXIOM_CONES.txt   verbatim #print axioms for all 25 declarations (live capture)
+    .zenodo.json        deposit metadata (Zenodo native; v1.0 DEPOSITED 2026-06-12,
+                        concept DOI 10.5281/zenodo.20663484; v1.1 promotion prepared,
+                        not yet minted)
+    CITATION.cff        citation metadata (CFF 1.2.0; concept DOI block present)
     LICENSE             Apache-2.0
 
 License: Apache-2.0.

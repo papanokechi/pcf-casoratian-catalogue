@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: papanokechi
 -/
 import Mathlib.LinearAlgebra.Matrix.Determinant.Basic
+import Mathlib.LinearAlgebra.Matrix.NonsingularInverse
 import Mathlib.GroupTheory.Perm.Fin
 import Mathlib.Tactic.Ring
 
@@ -122,5 +123,67 @@ theorem casoMat_det_ne_zero_of_init [IsDomain R]
   rw [Finset.prod_ne_zero_iff]
   intro m hm
   exact mul_ne_zero (pow_ne_zero _ (neg_ne_zero.mpr one_ne_zero)) (hc m hm)
+
+/-- **Forward determinacy.** A solution of the order-`(k+1)` recurrence is
+determined by its first `k+1` values: if `y` and `z` both satisfy the recurrence
+and agree on the initial block `0, …, k`, then they agree everywhere. The proof
+is strong induction on the index — the recurrence reaches back `k+1` places, so
+the induction must be *strong*. -/
+theorem sol_unique_of_init
+    (c : Fin (k + 1) → ℕ → R) (y z : ℕ → R)
+    (hy : ∀ n, y (n + (k + 1)) = ∑ j : Fin (k + 1), c j n * y (n + (j : ℕ)))
+    (hz : ∀ n, z (n + (k + 1)) = ∑ j : Fin (k + 1), c j n * z (n + (j : ℕ)))
+    (hinit : ∀ i : Fin (k + 1), y (i : ℕ) = z (i : ℕ)) :
+    ∀ n, y n = z n := by
+  intro n
+  induction n using Nat.strong_induction_on with
+  | _ n ih =>
+    rcases lt_or_ge n (k + 1) with hlt | hge
+    · simpa using hinit ⟨n, hlt⟩
+    · obtain ⟨m, rfl⟩ : ∃ m, n = m + (k + 1) := ⟨n - (k + 1), by omega⟩
+      rw [hy m, hz m]
+      refine Finset.sum_congr rfl (fun j _ => ?_)
+      rw [ih (m + (j : ℕ)) (by have := j.isLt; omega)]
+
+/-- **Fundamental system / completeness (converse to the Abel–Jacobi–Liouville
+law).** If the initial Casoratian `C(0) = det (casoMat s 0)` is a unit — e.g.
+nonzero over a field, or a unit over any `CommRing` — then *every* solution `y`
+of the order-`(k+1)` recurrence is an `R`-linear combination of the `k+1` basis
+solutions `s 0, …, s k`.
+
+Combined with `casoMat_det_ne_zero_of_init` (linear independence over a domain),
+this makes `{s t}` a machine-checked **fundamental set**: it both spans the
+solution space and is independent. This is the statement that simultaneous
+Hermite–Padé / Apéry-type applications consume. The witnessing coordinates are
+`a = C(0)⁻¹ ·ᵥ (y 0, …, y k)`. -/
+theorem solution_isLinearCombo
+    (s : Fin (k + 1) → ℕ → R) (c : Fin (k + 1) → ℕ → R)
+    (hrec : ∀ (t : Fin (k + 1)) (n : ℕ),
+      s t (n + (k + 1)) = ∑ j : Fin (k + 1), c j n * s t (n + (j : ℕ)))
+    (y : ℕ → R)
+    (hy : ∀ n, y (n + (k + 1)) = ∑ j : Fin (k + 1), c j n * y (n + (j : ℕ)))
+    (hunit : IsUnit (casoMat s 0).det) :
+    ∃ a : Fin (k + 1) → R, ∀ n, y n = ∑ t : Fin (k + 1), a t * s t n := by
+  classical
+  refine ⟨(casoMat s 0)⁻¹ *ᵥ (fun i : Fin (k + 1) => y (i : ℕ)), ?_⟩
+  set a : Fin (k + 1) → R := (casoMat s 0)⁻¹ *ᵥ (fun i : Fin (k + 1) => y (i : ℕ)) with ha
+  have hMa : (casoMat s 0) *ᵥ a = (fun i : Fin (k + 1) => y (i : ℕ)) := by
+    rw [ha, Matrix.mulVec_mulVec, Matrix.mul_nonsing_inv _ hunit, Matrix.one_mulVec]
+  have hzrec : ∀ n, (∑ t, a t * s t (n + (k + 1)))
+      = ∑ j : Fin (k + 1), c j n * (∑ t, a t * s t (n + (j : ℕ))) := by
+    intro n
+    rw [Finset.sum_congr rfl (fun t _ => by rw [hrec t n, Finset.mul_sum])]
+    rw [Finset.sum_comm]
+    refine Finset.sum_congr rfl (fun j _ => ?_)
+    rw [Finset.mul_sum]
+    refine Finset.sum_congr rfl (fun t _ => ?_)
+    ring
+  have hinit : ∀ i : Fin (k + 1), y (i : ℕ) = ∑ t, a t * s t (i : ℕ) := by
+    intro i
+    have hi : (casoMat s 0 *ᵥ a) i = y (i : ℕ) := congrFun hMa i
+    rw [← hi]
+    simp only [casoMat, Matrix.mulVec, dotProduct, Matrix.of_apply, Nat.zero_add]
+    exact Finset.sum_congr rfl (fun t _ => mul_comm _ _)
+  exact sol_unique_of_init c y (fun n => ∑ t, a t * s t n) hy hzrec hinit
 
 end PcfGeneralCaso
