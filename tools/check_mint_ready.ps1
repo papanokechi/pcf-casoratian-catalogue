@@ -34,12 +34,14 @@
   exit code is the most severe.
 
   Exit codes:
-    0  READY             - declared version is unminted, tree clean, on the server
+    0  READY             - declared version is unminted, tree clean, on the server, tagged
     1  DIRTY             - some tracked path is uncommitted, staged or untracked
     2  UNPUSHED          - HEAD is not the commit the server has for this branch
     3  CANNOT RUN        - not a git repo, no metadata, no branch, or Zenodo/remote unreachable
     4  ALREADY PUBLISHED - the declared version is live; minting would duplicate it, permanently
     5  VERSION CONFLICT  - .zenodo.json and CITATION.cff declare different versions
+    6  NO VERSION TAG    - HEAD carries no tag matching the declared version, so the
+                           uploaded archive would name no point in history
 
   Exit 3 is deliberately distinct from exit 0: a gate that cannot run must not
   be mistaken for a gate that passed. Exit 4 is deliberately distinct from 1
@@ -153,11 +155,30 @@ if ($null -eq $latest) {
     }
 }
 
+# --- 4. and the content being deposited is reachable by a version tag ---------
+# v1.0's own metadata records "published from git tag v0.1.3", and the file it
+# shipped is that tag's archive. That provenance is a claim the record makes and
+# nothing established. A deposit built from an untagged commit attaches bytes to
+# a permanent DOI with no named point in history to rebuild them from.
+$tagsAtHead = @(git -C $repo tag --points-at HEAD 2>$null | Where-Object { $_ })
+$verTag = $tagsAtHead | Where-Object { ($_ -replace '^v', '') -eq $ver }
+if ($tagsAtHead.Count -eq 0) {
+    $desc = git -C $repo describe --tags --abbrev=0 2>$null
+    $behind = if ($desc) { git -C $repo rev-list --count "$desc..HEAD" 2>$null } else { $null }
+    $where = if ($desc) { "latest tag is $desc, $behind commit(s) back" } else { "no tags in this repository" }
+    Add-Finding 6 "NO VERSION TAG" "nothing tags HEAD, so the upload would name no point in history ($where)"
+} elseif (-not $verTag) {
+    Add-Finding 6 "NO VERSION TAG" "HEAD is tagged '$($tagsAtHead -join ", ")' but the deposit declares v$ver - the archive name and the record version would disagree"
+} else {
+    Write-Host "tag     : $verTag at HEAD (the archive the upload should carry)"
+}
+
 # --- verdict ------------------------------------------------------------------
 Write-Host ""
 if ($findings.Count -eq 0) {
     Write-Host "MINT GATE: READY. v$ver is not yet published under concept 10.5281/zenodo.$ConceptId,"
-    Write-Host "  the tree is clean, and HEAD is the commit the server holds for '$branch'."
+    Write-Host "  the tree is clean, HEAD is the commit the server holds for '$branch',"
+    Write-Host "  and HEAD carries the tag '$verTag' the upload is named for."
     Write-Host "  This gate does not mint anything. The Publish action is the operator's."
     exit 0
 }
@@ -166,9 +187,9 @@ foreach ($f in $findings) { Write-Host ("  [{0}] {1}" -f $f.Label, $f.Detail) }
 Write-Host ""
 # Most severe first: a terminal condition outranks one that cannot be determined,
 # which outranks conditions the operator can fix by working.
-foreach ($code in 4, 3, 5, 1, 2) {
+foreach ($code in 4, 3, 5, 1, 2, 6) {
     if ($findings.Code -contains $code) {
-        Write-Host "MINT GATE: NOT READY - exiting $code (4=already published 3=cannot run 5=version conflict 1=dirty 2=unpushed)"
+        Write-Host "MINT GATE: NOT READY - exiting $code (4=already published 3=cannot run 5=version conflict 1=dirty 2=unpushed 6=no version tag)"
         exit $code
     }
 }

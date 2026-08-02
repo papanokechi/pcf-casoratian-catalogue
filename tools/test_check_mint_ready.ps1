@@ -70,6 +70,11 @@ function New-Fixture([string]$name, [string]$zver, [string]$cver) {
     Set-Content (Join-Path $p "FIXTURE.txt") "fixture: $name" -Encoding utf8
     git -C $p add -A *> $null
     git -C $p commit -q -m "fixture $name" *> $null
+    # Tag matching the declared version, so every pre-existing case isolates the
+    # axis it is for. Without this each one would also trip NO VERSION TAG and
+    # the codes would collapse onto 6 -- the fixture holding two variables at
+    # once, which is what the assertion block below exists to catch.
+    if ($zver) { git -C $p tag "v$zver" *> $null }
     git -C $p push -q origin main *> $null
     $p
 }
@@ -79,18 +84,22 @@ $dirty     = New-Fixture "dirty"     "1.1" "1.1"
 $unpushed  = New-Fixture "unpushed"  "1.1" "1.1"
 $conflict  = New-Fixture "conflict"  "1.1" "1.1"
 $published = New-Fixture "published" "1.0" "1.0"
+$untagged  = New-Fixture "untagged"  "1.1" "1.1"
+git -C $untagged tag -d "v1.1" *> $null
 Set-Content "$dirty\stray.txt" "uncommitted" -Encoding utf8
 Set-Content "$unpushed\extra.txt" "committed but not pushed" -Encoding utf8
 git -C $unpushed add -A *> $null; git -C $unpushed commit -q -m "not pushed" *> $null
+git -C $unpushed tag -f "v1.1" *> $null
 New-Meta $conflict "1.1" "1.2"
 git -C $conflict add -A *> $null
 git -C $conflict commit -q -m "conflicting versions" *> $null
+git -C $conflict tag -f "v1.1" *> $null
 git -C $conflict push -q origin main *> $null
 $norepo = "$root\norepo"; New-Item -ItemType Directory -Force $norepo | Out-Null
 
 Write-Host ""
 Write-Host "--- fixture assertion (direct observation, not the subject's report) ---"
-foreach ($n in @("ready", "dirty", "unpushed", "conflict", "published")) {
+foreach ($n in @("ready", "dirty", "unpushed", "conflict", "published", "untagged")) {
     $p = "$root\$n"
     $zv = (Get-Content "$p\.zenodo.json" -Raw | ConvertFrom-Json).version
     $cv = ((Get-Content "$p\CITATION.cff" | Where-Object { $_ -match '^version:' }) -replace '^version:\s*"?([^"]+)"?.*', '$1')
@@ -98,11 +107,13 @@ foreach ($n in @("ready", "dirty", "unpushed", "conflict", "published")) {
     $h  = (git -C $p rev-parse HEAD).Substring(0, 7)
     $r  = ((git -C $p ls-remote origin refs/heads/main) -split "`t")[0]
     $r  = if ($r) { $r.Substring(0, 7) } else { "(none)" }
-    "  {0,-10} zenodo={1,-4} cff={2,-4} dirty={3}  head={4} server={5} {6}" -f `
-        $n, $zv, $cv, $d, $h, $r, $(if ($h -eq $r) { "in-sync" } else { "DIVERGED" })
+    $tg = @(git -C $p tag --points-at HEAD 2>$null | Where-Object { $_ })
+    $tg = if ($tg.Count) { $tg -join "," } else { "(untagged)" }
+    "  {0,-10} zenodo={1,-4} cff={2,-4} dirty={3}  head={4} server={5} tag={6,-10} {7}" -f `
+        $n, $zv, $cv, $d, $h, $r, $tg, $(if ($h -eq $r) { "in-sync" } else { "DIVERGED" })
 }
 "  {0,-10} no .git present" -f "norepo"
-Write-Host "  fixtures differ in exactly one axis each: version-vs-live, dirtiness, push state, metadata agreement."
+Write-Host "  fixtures differ in exactly one axis each: version-vs-live, dirtiness, push state, metadata agreement, tagging."
 Write-Host "  (a uniform verdict across these would indict this harness, not the subject)"
 
 Write-Host ""
@@ -115,6 +126,7 @@ $cases = @(
     @{ n = "Zenodo unreachable";                   p = $ready;     api = "http://127.0.0.1:9/api/records"; want = 3 }
     @{ n = "v1.0 is already published";            p = $published; api = $null; want = 4 }
     @{ n = "metadata versions disagree";           p = $conflict;  api = $null; want = 5 }
+    @{ n = "HEAD carries no version tag";          p = $untagged;  api = $null; want = 6 }
 )
 
 $failures = 0
