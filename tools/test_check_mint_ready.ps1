@@ -49,8 +49,9 @@ $root = Join-Path ([IO.Path]::GetTempPath()) ("mintfix_" + [Guid]::NewGuid().ToS
 New-Item -ItemType Directory -Force $root | Out-Null
 Write-Host "fixture root: $root"
 
-function New-Meta([string]$dir, [string]$zver, [string]$cver) {
-    Set-Content (Join-Path $dir ".zenodo.json") ('{"version": "' + $zver + '", "title": "fixture"}') -Encoding utf8
+function New-Meta([string]$dir, [string]$zver, [string]$cver, [string]$desc = "fixture description, tense-neutral") {
+    $obj = [ordered]@{ version = $zver; title = "fixture"; description = $desc }
+    Set-Content (Join-Path $dir ".zenodo.json") ($obj | ConvertTo-Json -Compress) -Encoding utf8
     Set-Content (Join-Path $dir "CITATION.cff") @(
         'cff-version: 1.2.0'
         'message: "fixture"'
@@ -62,7 +63,7 @@ function New-Meta([string]$dir, [string]$zver, [string]$cver) {
 
 git init -q --bare "$root\origin.git" -b main 2>$null
 
-function New-Fixture([string]$name, [string]$zver, [string]$cver) {
+function New-Fixture([string]$name, [string]$zver, [string]$cver, [string]$desc = "fixture description, tense-neutral") {
     # Each fixture gets its OWN bare origin. A shared one would make every
     # fixture's push advance the same ref, so the first fixture would end up
     # legitimately behind the server and the "ready" case would report
@@ -74,7 +75,7 @@ function New-Fixture([string]$name, [string]$zver, [string]$cver) {
     git -C $p config user.email "harness@local" *> $null
     git -C $p config user.name  "harness"       *> $null
     git -C $p checkout -q -B main *> $null
-    New-Meta $p $zver $cver
+    New-Meta $p $zver $cver $desc
     # A per-fixture file, so the commit is never empty. Without it a fixture
     # whose metadata matched an earlier one produced NOTHING TO COMMIT, which
     # git prints to stdout -- and stdout inside a function is return value.
@@ -100,6 +101,10 @@ $unpushed  = New-Fixture "unpushed"  $UNMINTED $UNMINTED
 $conflict  = New-Fixture "conflict"  $UNMINTED $UNMINTED
 $published = New-Fixture "published" "1.0" "1.0"
 $untagged  = New-Fixture "untagged"  $UNMINTED $UNMINTED
+# The description is v1.1's real shipped wording. This fixture is a regression
+# test against an actual uncorrectable defect, not an invented one: both prior
+# deposits permanently assert they were never made.
+$selfneg   = New-Fixture "selfneg"   $UNMINTED $UNMINTED "VERSION 99.99 (DRAFT -- NOT YET MINTED, awaiting operator git-commit + Zenodo 'New version')"
 git -C $untagged tag -d "v$UNMINTED" *> $null
 Set-Content "$dirty\stray.txt" "uncommitted" -Encoding utf8
 Set-Content "$unpushed\extra.txt" "committed but not pushed" -Encoding utf8
@@ -142,6 +147,7 @@ $cases = @(
     @{ n = "v1.0 is already published";            p = $published; api = $null; want = 4 }
     @{ n = "metadata versions disagree";           p = $conflict;  api = $null; want = 5 }
     @{ n = "HEAD carries no version tag";          p = $untagged;  api = $null; want = 6 }
+    @{ n = "metadata says it is not yet minted";   p = $selfneg;   api = $null; want = 7 }
 )
 
 $failures = 0

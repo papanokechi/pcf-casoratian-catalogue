@@ -42,6 +42,13 @@
     5  VERSION CONFLICT  - .zenodo.json and CITATION.cff declare different versions
     6  NO VERSION TAG    - HEAD carries no tag matching the declared version, so the
                            uploaded archive would name no point in history
+    7  SELF-NEGATING     - the metadata about to be deposited asserts that it has not
+                           been deposited. Both prior deposits shipped this: v1.0's
+                           archive says "NOT YET DEPOSITED", v1.1's says "NOT YET
+                           MINTED". Neither can be corrected. The text is written
+                           before the mint and the mint falsifies it, so pre-mint
+                           metadata must be tense-neutral - describe what the version
+                           CONTAINS, never its deposit status.
 
   Exit 3 is deliberately distinct from exit 0: a gate that cannot run must not
   be mistaken for a gate that passed. Exit 4 is deliberately distinct from 1
@@ -81,10 +88,10 @@ if ($LASTEXITCODE -ne 0) {
 # claims to believe.
 $zPath = Join-Path $repo ".zenodo.json"
 $cPath = Join-Path $repo "CITATION.cff"
-$zVer = $null; $cVer = $null; $cDoi = $null
+$zVer = $null; $cVer = $null; $cDoi = $null; $zMeta = $null
 
 if (Test-Path $zPath) {
-    try { $zVer = (Get-Content $zPath -Raw | ConvertFrom-Json).version } catch { $zVer = $null }
+    try { $zMeta = Get-Content $zPath -Raw | ConvertFrom-Json; $zVer = $zMeta.version } catch { $zVer = $null; $zMeta = $null }
 }
 if (Test-Path $cPath) {
     $cLines = Get-Content $cPath
@@ -173,6 +180,41 @@ if ($tagsAtHead.Count -eq 0) {
     Write-Host "tag     : $verTag at HEAD (the archive the upload should carry)"
 }
 
+# --- 5. and the metadata does not assert that it has not been deposited -------
+# Both prior deposits shipped a permanent, uncorrectable claim that they did not
+# exist: v1.0's archive says "NOT YET DEPOSITED", v1.1's says "NOT YET MINTED".
+# The text is authored before the mint and the mint is what falsifies it, so
+# there is no ordering that saves a tense-bound status label. Checked in the two
+# fields that leave this repository: 'description' is uploaded and becomes the
+# record's own prose, 'notes' ships inside the source archive.
+$selfNegating = @(
+    'NOT YET MINTED', 'NOT YET DEPOSITED', 'not yet minted', 'not yet deposited',
+    'awaiting operator', 'will only exist after'
+)
+if ($null -eq $zMeta) {
+    # Not "no phrases found" - no text was searched at all. A check that could not
+    # run must never be reported, or defaulted, as a check that passed.
+    Add-Finding 3 "CANNOT RUN" ".zenodo.json did not parse, so the self-negating-metadata check searched nothing"
+} else {
+    $scanned = 0
+    foreach ($field in 'description', 'notes') {
+        $text = $zMeta.$field
+        if (-not $text) { continue }
+        $scanned++
+        foreach ($phrase in $selfNegating) {
+            $at = $text.IndexOf($phrase, [StringComparison]::Ordinal)
+            if ($at -lt 0) { continue }
+            $from = [Math]::Max(0, $at - 45)
+            $len  = [Math]::Min($text.Length - $from, $phrase.Length + 90)
+            $ctx  = ($text.Substring($from, $len) -replace '\s+', ' ').Trim()
+            Add-Finding 7 "SELF-NEGATING" "'$field' contains ""$phrase"" - the deposit would permanently assert it was never made: ...$ctx..."
+        }
+    }
+    if ($scanned -eq 0) {
+        Add-Finding 3 "CANNOT RUN" ".zenodo.json has neither 'description' nor 'notes', so the self-negating-metadata check searched nothing"
+    }
+}
+
 # --- verdict ------------------------------------------------------------------
 Write-Host ""
 if ($findings.Count -eq 0) {
@@ -187,9 +229,9 @@ foreach ($f in $findings) { Write-Host ("  [{0}] {1}" -f $f.Label, $f.Detail) }
 Write-Host ""
 # Most severe first: a terminal condition outranks one that cannot be determined,
 # which outranks conditions the operator can fix by working.
-foreach ($code in 4, 3, 5, 1, 2, 6) {
+foreach ($code in 4, 3, 5, 1, 2, 6, 7) {
     if ($findings.Code -contains $code) {
-        Write-Host "MINT GATE: NOT READY - exiting $code (4=already published 3=cannot run 5=version conflict 1=dirty 2=unpushed 6=no version tag)"
+        Write-Host "MINT GATE: NOT READY - exiting $code (4=already published 3=cannot run 5=version conflict 1=dirty 2=unpushed 6=no version tag 7=self-negating metadata)"
         exit $code
     }
 }
