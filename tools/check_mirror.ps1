@@ -62,6 +62,8 @@ function Exit-CannotRun {
     [Console]::Error.WriteLine("CANNOT VERIFY MIRROR - $Reason")
     [Console]::Error.WriteLine("  This is exit 3, not a pass. The byte-faithfulness claim on")
     [Console]::Error.WriteLine("  10.5281/zenodo.20663484 is unverified, not confirmed.")
+    [Console]::Error.WriteLine("  If the host path is right, check which branch it is on: a second")
+    [Console]::Error.WriteLine("  working copy of pcf-delta can lack these files entirely at HEAD.")
     exit 3
 }
 
@@ -85,7 +87,24 @@ if (-not (Test-Path (Join-Path $HostRepo '.git'))) {
 }
 
 Write-Line "mirror : $MirrorRepo"
+function Get-RepoRef {
+    <#
+      Branch and commit a repository is currently on. This is printed with every verdict because
+      "HEAD" is a load-bearing environmental fact that the comparison depends on and does not
+      otherwise state: a second working copy of the host on a different branch can hold entirely
+      different content at the same paths, and a verdict that does not name the ref it read is
+      a verdict a reader cannot reproduce.
+    #>
+    param([string] $Repo)
+    $branch = & git -C $Repo rev-parse --abbrev-ref HEAD 2>$null
+    $commit = & git -C $Repo rev-parse --short HEAD 2>$null
+    if (-not $commit) { return '(no commits)' }
+    return "$branch @ $commit"
+}
+
 Write-Line "host   : $HostRepo"
+Write-Line "         $(Get-RepoRef $HostRepo)"
+Write-Line "         mirror is $(Get-RepoRef $MirrorRepo)"
 Write-Line ""
 
 function Get-BlobSha {
