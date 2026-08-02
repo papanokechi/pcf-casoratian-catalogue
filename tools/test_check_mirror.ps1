@@ -103,3 +103,11 @@ Write-Host "failures: $fails (expect 0)"
 
 Remove-Item -Recurse -Force $fixRoot -ErrorAction SilentlyContinue
 Write-Host "fixtures removed."
+
+# A harness that prints its result and exits 0 regardless is the defect it exists to catch:
+# wired into anything automated it passes silently. The count is the exit code.
+if ($fails -gt 0) {
+    [Console]::Error.WriteLine("HARNESS FAILED - $fails of $($cases.Count) case(s) returned the wrong exit code.")
+    exit 1
+}
+exit 0
