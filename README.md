@@ -103,6 +103,16 @@ the sign is the corpus `-(c_0 n)`; at `k = 3` it is `+(c_0 n)`. The
 | **PROVEN** | `goldenRatio_irrational_via_caso` — `Irrational φ` via the order-3 Casoratian (independent of Mathlib's √5 proof) | ″ |
 | **VERIFIED** | symbolic proof `k=3` + exact-rational `k=2..7` + named instances | `harness_caso_k.py` |
 
+**Note (what the sympy gate's exit status certifies) — new in v1.1.** `harness_caso.py` and
+`harness_caso_k.py` report their verdict on stdout and **exit `0` whether they pass or fail**; neither
+contains a `sys.exit`. Confirmed by direct observation on 2026-08-02 rather than by reading the source:
+perturbing the conjectured closed form, and separately the predicted sign `(-1)^(k-1)`, produced
+`Overall: FAIL` and `OVERALL: SOME FAILED` with exit status `0` in both cases. The `VERIFIED` grade above
+therefore rests on a printed verdict read by a human; a non-interactive caller would not see a failure.
+This does not touch the `PROVEN` grade or the cone result below, which come from `lake env lean
+Check.lean` — Lean's toolchain, which does exit nonzero on failure. Recorded because a deposit that cites
+a control as evidence should carry that control's auditability with the claim.
+
 **Note (matrix convention).** `GeneralCaso.lean` indexes the order `k+1` by
 `Fin (k+1)`, so its sign reads `(-1)^k` for the order-`(k+1)` Casoratian; with the
 prose's order-`k` indexing this is the same `(-1)^{k-1}`. The general step is proved
