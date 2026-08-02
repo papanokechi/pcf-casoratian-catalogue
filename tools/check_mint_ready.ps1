@@ -59,7 +59,15 @@ param(
     [string] $RepoPath  = (Join-Path $PSScriptRoot ".."),
     [string] $ConceptId,
     [string] $ZenodoApi = "https://zenodo.org/api/records",
-    [int]    $TimeoutSec = 25
+    [int]    $TimeoutSec = 25,
+    # Which tracked paths actually ship. Omitted, the gate ASSUMES the deposit is
+    # the tag archive of the whole tracked tree - true here, false wherever the
+    # deposit is an explicit manifest subset (pcf-delta ships 10 root files plus
+    # src/ and lean/; its PROVENANCE.md and tools/ never leave the repository).
+    # The assumption is printed on every run, because a gate that says "the
+    # deposited archive would assert this" about a file it has not established is
+    # in the deposit is making the same unverified claim it exists to refuse.
+    [string[]] $DepositPath
 )
 
 $ErrorActionPreference = 'Continue'
@@ -249,11 +257,21 @@ $snShapeRx = [regex]'(?i)\b(?:not\s+yet|not\s+been|never\s+been|yet\s+to\s+be|wi
 # Skipped files are COUNTED AND PRINTED: a file that was not scanned must never
 # be indistinguishable, in the output, from a file that was scanned and clean.
 $snMaxBytes = 2MB
-$tracked = @(git -C $repo ls-files 2>$null | Where-Object { $_ })
+$allTracked = @(git -C $repo ls-files 2>$null | Where-Object { $_ })
+if ($DepositPath) {
+    $tracked = @($allTracked | Where-Object { $f = $_; @($DepositPath | Where-Object { $f -like $_ }).Count -gt 0 })
+    $snScope = "deposit set = $($tracked.Count) of $($allTracked.Count) tracked file(s) matching -DepositPath"
+    $snIf    = "ships in the deposit, which would"
+} else {
+    $tracked = $allTracked
+    $snScope = "deposit set ASSUMED = all $($allTracked.Count) tracked file(s), i.e. the tag archive of this tree; pass -DepositPath where the deposit is a manifest subset"
+    $snIf    = "is tracked, so if the deposit is this tag archive it would"
+}
+Write-Host "scope   : $snScope"
 if ($tracked.Count -eq 0) {
     # Not "no phrases found" - no text was searched at all. A check that could not
     # run must never be reported, or defaulted, as a check that passed.
-    Add-Finding 3 "CANNOT RUN" "no tracked files listed, so the self-negating-metadata check searched nothing"
+    Add-Finding 3 "CANNOT RUN" "the deposit set is empty ($snScope), so the self-negating-metadata check searched nothing"
 } else {
     $snScanned = 0; $snEmpty = 0; $snExempt = 0; $snExemptFiles = @(); $snSkipped = @()
     foreach ($rel in $tracked) {
@@ -273,7 +291,7 @@ if ($tracked.Count -eq 0) {
                 }
                 $ctx = ($line -replace '\s+', ' ').Trim()
                 if ($ctx.Length -gt 130) { $ctx = $ctx.Substring(0, 130) + "..." }
-                Add-Finding 7 "SELF-NEGATING" "${rel}:$($i+1) contains ""$phrase"" - the deposited archive would permanently assert it was never made: $ctx"
+                Add-Finding 7 "SELF-NEGATING" "${rel}:$($i+1) contains ""$phrase"" - it $snIf permanently assert it was never made: $ctx"
             }
         }
 
@@ -304,7 +322,7 @@ if ($tracked.Count -eq 0) {
             if ($lo -eq $hi -and @($selfNegating | Where-Object { $lines[$lo].Contains($_) }).Count -gt 0) { continue }
             $ctx = ($mm.Value -replace '\s+', ' ').Trim()
             $where = if ($lo -eq $hi) { "$($lo+1)" } else { "$($lo+1)-$($hi+1)" }
-            Add-Finding 7 "SELF-NEGATING" "${rel}:$where asserts ""$ctx"" across a line break or comment marker - the deposited archive would permanently assert it was never made"
+            Add-Finding 7 "SELF-NEGATING" "${rel}:$where asserts ""$ctx"" across a line break or comment marker - it $snIf permanently assert it was never made"
         }
     }
     if ($snScanned -eq 0) {

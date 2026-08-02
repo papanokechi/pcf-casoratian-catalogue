@@ -151,6 +151,24 @@ git -C $splitclaim commit -q -m "self-negating claim split across lines" *> $nul
 git -C $splitclaim tag -f "v$UNMINTED" *> $null
 git -C $splitclaim push -q origin main *> $null
 
+# A claim in a tracked file that never ships. pcf-delta deposits an explicit
+# manifest - 10 root files plus src/ and lean/ - so its PROVENANCE.md and tools/
+# are tracked and NOT deposited. Scanning every tracked file there would refuse a
+# deposit over text the archive will not contain, and would say "the deposited
+# archive would assert this" about a file the gate never established is in it -
+# the same unverified claim about an uninspected object that exit 7 exists to
+# refuse. So the scope is a parameter, and the ASSUMPTION is printed when it is
+# not supplied.
+$outofscope = New-Fixture "outofscope" $UNMINTED $UNMINTED
+Set-Content "$outofscope\NOTES.md" @(
+    '# working notes, tracked but never deposited'
+    'v99.99 is NOT YET DEPOSITED - the operator mints it by hand.'   # SELFNEG-OK
+) -Encoding utf8
+git -C $outofscope add -A *> $null
+git -C $outofscope commit -q -m "self-negating claim in a non-deposited file" *> $null
+git -C $outofscope tag -f "v$UNMINTED" *> $null
+git -C $outofscope push -q origin main *> $null
+
 Write-Host ""
 Write-Host "--- fixture assertion (direct observation, not the subject's report) ---"
 foreach ($n in @("ready", "dirty", "unpushed", "conflict", "published", "untagged")) {
@@ -185,6 +203,15 @@ if ($litHits -ne 0 -or -not $hasSplit) {
     Write-Host "  FIXTURE FAULT: splitclaim does not exercise the split-claim pass; a pass here would mean nothing"
     $prefail++
 }
+# The out-of-scope pair only means something if the claim really is outside the
+# declared set. Asserted here, not inferred from the subject agreeing with itself.
+$oosClaim  = @(Get-Content "$outofscope\NOTES.md" | Where-Object { $_ -match '(?i)NOT YET DEPOSITED' }).Count   # SELFNEG-OK
+$oosInSet  = ('NOTES.md' -like '*.json')
+"  {0,-10} claim present in NOTES.md={1} (must be 1)  NOTES.md matches the declared set={2} (must be False)" -f "outofscope", $oosClaim, $oosInSet
+if ($oosClaim -ne 1 -or $oosInSet) {
+    Write-Host "  FIXTURE FAULT: outofscope does not separate deposit scope from tracked scope"
+    $prefail++
+}
 Write-Host "  fixtures differ in exactly one axis each: version-vs-live, dirtiness, push state, metadata agreement, tagging."
 Write-Host "  (a uniform verdict across these would indict this harness, not the subject)"
 
@@ -202,6 +229,11 @@ $cases = @(
     @{ n = "metadata says it is not yet minted";   p = $selfneg;   api = $null; want = 7 }   # SELFNEG-OK
     @{ n = "claim split across lines by a comment"; p = $splitclaim; api = $null; want = 7
        must = @("across a line break or comment marker") }
+    @{ n = "claim outside an explicit deposit set"; p = $outofscope; api = $null; want = 0
+       extra = @("-DepositPath", "*.json")
+       mustNot = @("SELF-NEGATING") }
+    @{ n = "same repo, deposit set not declared";   p = $outofscope; api = $null; want = 7
+       must = @("deposit set ASSUMED", "if the deposit is this tag archive") }
     @{ n = "no concept DOI: local checks still run"; p = $nodoi;   api = $null; want = 3
        must = @("SELF-NEGATING", "the already-published check cannot run") }
 )
@@ -211,6 +243,7 @@ $seen = @()
 foreach ($c in $cases) {
     $args = @("-NoProfile", "-File", $Subject, "-RepoPath", $c.p, "-TimeoutSec", "8")
     if ($c.api) { $args += @("-ZenodoApi", $c.api) }
+    if ($c.extra) { $args += $c.extra }
     $out = (& pwsh @args 2>&1 | Out-String)
     $got = $LASTEXITCODE
     $seen += $got
