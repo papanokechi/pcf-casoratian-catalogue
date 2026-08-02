@@ -5,9 +5,12 @@
 > **Disambiguation / status.** This repository is the *machine-checkable
 > Casoratian closed-form catalogue*. It now holds its **first proven entry** — the
 > higher-order (order ≥ 3) Casoratian Abel–Jacobi–Liouville law (entry **C1**
-> below), **deposited on Zenodo 2026-06-12** as version 1.0 (concept DOI
-> [10.5281/zenodo.20663484](https://doi.org/10.5281/zenodo.20663484)). A **v1.1
-> promotion** (prepared 2026-06-13, not yet minted — operator-gated) extends C1 with a
+> below), **deposited on Zenodo 2026-06-12** as version 1.0 and promoted to
+> **version 1.1 on 2026-08-02** (concept DOI
+> [10.5281/zenodo.20663484](https://doi.org/10.5281/zenodo.20663484), always resolving
+> to the latest version; v1.1 version DOI
+> [10.5281/zenodo.21753829](https://doi.org/10.5281/zenodo.21753829), minted from git
+> tag `v1.1`). The **v1.1 promotion** extends C1 with a
 > formalized **fundamental-system converse** and a machine-checked **irrationality
 > certificate** re-deriving `Irrational φ` through the order-3 Casoratian. It remains **distinct from** the
 > published companion repository
@@ -47,7 +50,10 @@ Worked deposited example (self-test gate, see harness_caso.py):
    A PASS is the prerequisite; a FAIL kills the conjecture cheaply.
 4. ONLY THEN formalize the finitary core in Lean 4 / Mathlib and verify the
    axiom cone is exactly {propext, Classical.choice, Quot.sound}, zero sorry.
-5. Deposit: tag a release; Zenodo concept DOI as isSupplementTo target.
+5. Deposit: run `tools/check_mint_ready.ps1` and mint ONLY on exit 0. Tag the
+   release first — the gate refuses an untagged HEAD (exit 6), because the
+   deposited archive is named from the tag. Zenodo concept DOI as isSupplementTo
+   target; new versions go under the same concept DOI, never as a new record.
 
 ## Epistemic status (four-grade SIARC convention)
 
@@ -173,10 +179,21 @@ target recurrence whose shrinking remainder yields a *new* irrationality theorem
       HermitePade.lean  entry C1 — irrationality pipeline + concrete order-3 certificates
                         re-deriving Irrational φ via the Casoratian (PROVEN; same gate)
       AXIOM_CONES.txt   verbatim #print axioms for all 25 declarations (live capture)
-    .zenodo.json        deposit metadata (Zenodo native; v1.0 DEPOSITED 2026-06-12,
-                        concept DOI 10.5281/zenodo.20663484; v1.1 promotion prepared,
-                        not yet minted)
-    CITATION.cff        citation metadata (CFF 1.2.0; concept DOI block present)
+    .zenodo.json        deposit metadata (Zenodo native; concept DOI 10.5281/zenodo.20663484;
+                        v1.0 DEPOSITED 2026-06-12, v1.1 DEPOSITED 2026-08-02 =
+                        10.5281/zenodo.21753829, minted from git tag v1.1)
+    CITATION.cff        citation metadata (CFF 1.2.0; concept + both version DOIs)
+    tools/
+      check_mint_ready.ps1       deposit gate. Exits 0 ready / 1 dirty tree / 2 not on
+                                 server / 3 CANNOT RUN / 4 already published / 5 version
+                                 conflict / 6 no version tag. Asks Zenodo and asks the
+                                 server; never trusts a local remote-tracking ref.
+      test_check_mint_ready.ps1  harness: 8 fixtures -> 7 exit codes. Exits nonzero on
+                                 any mismatch.
+      check_mirror.ps1           verifies the three Lean files are byte-faithful mirrors
+                                 of the pcf-delta host sources, by git blob SHA, and
+                                 prints the ref each side was read at.
+      test_check_mirror.ps1      harness: 6 fixtures -> 4 exit codes.
     LICENSE             Apache-2.0
 
 License: Apache-2.0.

@@ -28,7 +28,7 @@ authors:
   - family-names: "Papanokechi"
     orcid: "https://orcid.org/0009-0000-6192-8273"
 version: "1.1"
-date-released: "2026-06-13"
+date-released: "2026-08-02"
 license: Apache-2.0
 repository-code: "https://github.com/papanokechi/pcf-casoratian-catalogue"
 doi: "10.5281/zenodo.20663484"
@@ -39,6 +39,9 @@ identifiers:
   - type: doi
     value: "10.5281/zenodo.20663485"
     description: "Version DOI (v1.0, deposited 2026-06-12)"
+  - type: doi
+    value: "10.5281/zenodo.21753829"
+    description: "Version DOI (v1.1, deposited 2026-08-02, from git tag v1.1)"
 keywords:
   - "polynomial continued fractions"
   - "Casoratian"

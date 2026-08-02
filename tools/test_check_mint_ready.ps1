@@ -22,10 +22,21 @@
       it tested worked.
 
   The Zenodo-dependent cases deliberately use the LIVE API against the real
-  concept record rather than a stub: "already published" is checked by
-  declaring v1.0 (which is live) and "ready" by declaring v1.1 (which is not).
-  A stub would agree with reality only in the environment where it was
-  written.
+  concept record rather than a stub: a stub would agree with reality only in
+  the environment where it was written.
+
+  BUT a live fixture may only rest on a MONOTONE fact. "v1.0 is published" is
+  monotone: Zenodo records are permanent, so once true it is true forever.
+  "v1.1 is not published" is NOT monotone -- and it was destroyed on
+  2026-08-02 by the very mint this gate cleared. Every non-published fixture
+  then returned 4 (the top severity, which masks the axis each one isolates)
+  and the harness reported 5 failures against a healthy subject. The harness
+  was right the day it was written and became wrong when the world moved,
+  with nothing observing the transition.
+
+  So the unpublished cases declare version 99.99, which no release will ever
+  carry. The rule this encodes: a fixture asserting the ABSENCE of a public
+  record is asserting something the project's own success will falsify.
 #>
 [CmdletBinding()]
 param([string] $Subject = (Join-Path $PSScriptRoot "check_mint_ready.ps1"))
@@ -79,21 +90,25 @@ function New-Fixture([string]$name, [string]$zver, [string]$cver) {
     $p
 }
 
-$ready     = New-Fixture "ready"     "1.1" "1.1"
-$dirty     = New-Fixture "dirty"     "1.1" "1.1"
-$unpushed  = New-Fixture "unpushed"  "1.1" "1.1"
-$conflict  = New-Fixture "conflict"  "1.1" "1.1"
+# $UNMINTED is a version no release will ever carry, so these fixtures rest on
+# a fact the world cannot revoke. See the header note: they previously declared
+# 1.1, and the 2026-08-02 mint turned all five into ALREADY PUBLISHED.
+$UNMINTED = "99.99"
+$ready     = New-Fixture "ready"     $UNMINTED $UNMINTED
+$dirty     = New-Fixture "dirty"     $UNMINTED $UNMINTED
+$unpushed  = New-Fixture "unpushed"  $UNMINTED $UNMINTED
+$conflict  = New-Fixture "conflict"  $UNMINTED $UNMINTED
 $published = New-Fixture "published" "1.0" "1.0"
-$untagged  = New-Fixture "untagged"  "1.1" "1.1"
-git -C $untagged tag -d "v1.1" *> $null
+$untagged  = New-Fixture "untagged"  $UNMINTED $UNMINTED
+git -C $untagged tag -d "v$UNMINTED" *> $null
 Set-Content "$dirty\stray.txt" "uncommitted" -Encoding utf8
 Set-Content "$unpushed\extra.txt" "committed but not pushed" -Encoding utf8
 git -C $unpushed add -A *> $null; git -C $unpushed commit -q -m "not pushed" *> $null
-git -C $unpushed tag -f "v1.1" *> $null
-New-Meta $conflict "1.1" "1.2"
+git -C $unpushed tag -f "v$UNMINTED" *> $null
+New-Meta $conflict $UNMINTED "99.98"
 git -C $conflict add -A *> $null
 git -C $conflict commit -q -m "conflicting versions" *> $null
-git -C $conflict tag -f "v1.1" *> $null
+git -C $conflict tag -f "v$UNMINTED" *> $null
 git -C $conflict push -q origin main *> $null
 $norepo = "$root\norepo"; New-Item -ItemType Directory -Force $norepo | Out-Null
 
@@ -119,7 +134,7 @@ Write-Host "  (a uniform verdict across these would indict this harness, not the
 Write-Host ""
 Write-Host "--- subject under test ---"
 $cases = @(
-    @{ n = "ready (v1.1 unminted, clean, pushed)"; p = $ready;     api = $null; want = 0 }
+    @{ n = "ready (unminted version, clean, pushed)"; p = $ready;   api = $null; want = 0 }
     @{ n = "dirty tree";                           p = $dirty;     api = $null; want = 1 }
     @{ n = "committed but not on server";          p = $unpushed;  api = $null; want = 2 }
     @{ n = "not a git repository";                 p = $norepo;    api = $null; want = 3 }
